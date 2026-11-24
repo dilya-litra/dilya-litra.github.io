@@ -6,7 +6,7 @@
 <title>dilya.litra · литература к ЕНТ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Marck+Script&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Marck+Script&family=Oswald:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --cream:#FBF8F4; --pink:#F6E7E5; --pink2:#EFD8D6; --rose:#F2D3D4; --rose2:#D69AA3;
@@ -325,6 +325,46 @@ aside a.cur{background:var(--burg)}
 @media print{body{background:#fff!important}.card{border:1px solid #EBD3D1}}
 .wt small{display:block;margin-top:2px;font-family:var(--sans);font-size:13px;font-weight:500;color:var(--muted);line-height:1.35}
 .week summary{align-items:flex-start}.week summary .wnum{margin-top:2px}
+
+/* промо-шапка */
+.promo{position:relative;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:28px;align-items:center;margin-top:34px;padding:42px 40px;border-radius:28px;background:linear-gradient(135deg,#F7E9E6,#FBF4EE 60%,#F3E2DC);border:1px solid var(--line);overflow:hidden}
+.promo:before{content:"";position:absolute;right:-120px;top:-120px;width:420px;height:420px;border-radius:999px;background:radial-gradient(circle,#EFCFCC 0,transparent 70%);opacity:.7}
+.hl-wrap{margin:0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;font-family:'Oswald',var(--sans);font-weight:700;text-transform:uppercase;line-height:1;font-size:clamp(38px,6.4vw,76px);letter-spacing:.01em}
+.hl{display:inline-block;padding:8px 18px 10px}
+.hl.w{background:var(--cream);color:var(--ink);box-shadow:0 4px 14px rgba(91,46,40,.06)}
+.hl.b{background:var(--burg);color:var(--cream);transform:rotate(-1.2deg)}
+.promo-sub{margin:22px 0 0;max-width:500px;font-size:16px;line-height:1.6;color:var(--text)}
+.promo-sub b{color:var(--burg)}
+.promo-hint{margin:8px 0 0;font-size:13px;color:var(--label);font-weight:600}
+.promo-btn{display:flex;margin-top:22px;max-width:420px;background:var(--burg);color:var(--cream);border-radius:16px;min-height:60px;font-size:17px}
+.promo-btn:hover{background:#561d28;color:var(--cream)}
+.promo-pic{position:relative;justify-self:center;width:min(100%,380px)}
+.polaroid{position:relative;margin:0;background:#fff;padding:12px 12px 14px;border-radius:6px;box-shadow:0 18px 40px rgba(91,46,40,.18);transform:rotate(2.5deg)}
+.polaroid img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:3px}
+.polaroid figcaption{font-family:var(--script);font-size:24px;color:var(--burg);text-align:center;margin-top:8px}
+.polaroid .tape{top:-12px;left:50%;width:120px;margin-left:-60px;transform:rotate(-3deg)}
+.badge{position:absolute;padding:14px 18px;border-radius:14px;box-shadow:0 12px 26px rgba(91,46,40,.18);max-width:190px}
+.badge b{display:block;font-family:'Oswald',var(--sans);font-size:38px;line-height:1}
+.badge span{display:block;margin-top:4px;font-size:13px;font-weight:600;line-height:1.3}
+.badge.b1{left:-34px;bottom:120px;background:var(--burg);color:var(--cream)}
+.badge.b2{right:-22px;bottom:-14px;background:var(--rose);color:var(--burg)}
+.hello2{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;margin-top:18px;align-items:stretch}
+.hello2 .minis{align-content:stretch}
+@media (max-width:820px){
+  .promo{grid-template-columns:1fr;padding:30px 20px 44px}
+  .promo-pic{width:min(86%,340px)}
+  .badge.b1{left:-18px;bottom:90px}.badge.b2{right:-14px}
+  .hello2{grid-template-columns:1fr}
+  .promo-btn{max-width:none}
+}
+.hl{white-space:nowrap}
+.hl-wrap{font-size:clamp(30px,8.4vw,72px)}
+@media (min-width:821px){.hl-wrap{font-size:clamp(40px,5.2vw,72px)}}
+.badge.b2{top:34px;bottom:auto;right:-26px}
+.badge.b1{bottom:70px}
+.hello2{align-items:start}
+.minis{height:100%}
+.mini{display:flex;flex-direction:column;justify-content:center;min-height:100%}
 
 </style>
 </head>
@@ -16993,27 +17033,31 @@ function renderHome(){
   const sb = n => `<button type="button" aria-pressed="${st === n}" onclick="setStream('${n}')">${n} поток</button>`;
   app.innerHTML = `
   <div class="wrap">
-    <div class="hello">
-      <section class="card hero" style="position:relative">
-        <div class="tape tape-stripe" aria-hidden="true" style="top:-12px;right:44px;width:120px;transform:rotate(4deg)"></div>
-        <p class="kicker">привет!</p>
-        <h1 class="h1">Литература к ЕНТ <i>с любовью</i> к каждому герою</h1>
-        <p class="lead">${WEEKS.length} ${plural(WEEKS.length,'неделя','недели','недель')}, ${ALL.length} ${plural(ALL.length,'урок','урока','уроков')}. Видеоуроки, конспекты и тесты в формате ЕНТ в одном месте.</p>
+    <section class="promo">
+      <div class="promo-txt">
+        <h1 class="hl-wrap"><span class="hl w">Готовлю к ЕНТ</span><span class="hl b">по литературе</span><span class="hl w">с любовью</span></h1>
+        <p class="promo-sub"><b>Диля</b>, преподаватель русской литературы. ${WEEKS.length} ${plural(WEEKS.length,'неделя','недели','недель')}: видеоуроки, конспекты и тесты точь-в-точь как на ЕНТ.</p>
         <div class="stream" role="group" aria-label="Мой поток">${sb('2')}${sb('3')}</div>
-        ${st ? '' : '<p style="margin:10px 0 0;font-size:13px;color:var(--label);font-weight:600">Выбери свой поток, и я покажу твою неделю</p>'}
+        ${st ? '' : '<p class="promo-hint">Выбери свой поток, и я покажу твою неделю</p>'}
+        ${next ? `<a class="btn promo-btn" href="#/lesson/${next.id}">${doneAll ? 'Продолжить обучение' : 'Начать обучение'} →</a>` : ''}
+      </div>
+      <div class="promo-pic">
+        <figure class="polaroid"><div class="tape tape-stripe" aria-hidden="true"></div><img src="dilya.jpg" alt="Диля, преподаватель литературы"><figcaption>с любовью, ваша Диля</figcaption></figure>
+        <div class="badge b1"><b>${ALL.length}</b><span>${plural(ALL.length,'урок','урока','уроков')} с конспектами</span></div>
+        <div class="badge b2"><b>${(LESSONS.reduce((n, L) => n + (L.questions ? L.questions.length : 0), 0)).toLocaleString('ru-RU')}</b><span>заданий в формате ЕНТ</span></div>
+      </div>
+    </section>
+    <div class="hello2">
+      <section class="card now">
+        <p class="label">Сейчас · неделя ${cw}</p>
+        <h3>${next ? esc(next.title) : 'Всё пройдено!'}</h3>
+        <p>${next ? esc(next.author) : ''}</p>
+        ${next ? `<a class="btn" href="#/lesson/${next.id}">${doneAll ? 'Продолжить' : 'Начать'} →</a>` : ''}
       </section>
-      <div class="side">
-        <section class="card now">
-          <p class="label">Сейчас · неделя ${cw}</p>
-          <h3>${next ? esc(next.title) : 'Всё пройдено!'}</h3>
-          <p>${next ? esc(next.author) : ''}</p>
-          ${next ? `<a class="btn" href="#/lesson/${next.id}">${doneAll ? 'Продолжить' : 'Начать'} →</a>` : ''}
-        </section>
-        <div class="minis">
-          <div class="card mini"><b>${doneAll}</b><span>из ${ALL.length} уроков</span></div>
-          <div class="card mini"><b>${avg}</b><span>средний балл</span></div>
-          <div class="card mini"><b>${sk}${sk ? '🔥' : ''}</b><span>${plural(sk,'день','дня','дней')} подряд</span></div>
-        </div>
+      <div class="minis">
+        <div class="card mini"><b>${doneAll}</b><span>из ${ALL.length} уроков</span></div>
+        <div class="card mini"><b>${avg}</b><span>средний балл</span></div>
+        <div class="card mini"><b>${sk}${sk ? '🔥' : ''}</b><span>${plural(sk,'день','дня','дней')} подряд</span></div>
       </div>
     </div>
     <div class="sec-title" id="lessons"><h2>Уроки недели</h2><span class="script">неделя ${cw}</span></div>
