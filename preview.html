@@ -366,6 +366,10 @@ aside a.cur{background:var(--burg)}
 .minis{height:100%}
 .mini{display:flex;flex-direction:column;justify-content:center;min-height:100%}
 
+.hero2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px;align-items:center;margin-top:34px;padding:40px 44px}
+.hero2 .promo-pic{width:min(100%,300px)}
+@media (max-width:820px){.hero2{grid-template-columns:1fr;padding:30px 22px 36px}.hero2 .promo-pic{width:min(80%,280px)}}
+
 </style>
 </head>
 <body>
@@ -17033,18 +17037,16 @@ function renderHome(){
   const sb = n => `<button type="button" aria-pressed="${st === n}" onclick="setStream('${n}')">${n} поток</button>`;
   app.innerHTML = `
   <div class="wrap">
-    <section class="promo">
-      <div class="promo-txt">
-        <h1 class="hl-wrap"><span class="hl w">Готовлю к ЕНТ</span><span class="hl b">по литературе</span><span class="hl w">с любовью</span></h1>
-        <p class="promo-sub"><b>Диля</b>, преподаватель русской литературы. ${WEEKS.length} ${plural(WEEKS.length,'неделя','недели','недель')}: видеоуроки, конспекты и тесты точь-в-точь как на ЕНТ.</p>
+    <section class="card hero hero2">
+      <div class="hero-txt">
+        <p class="kicker">привет!</p>
+        <h1 class="h1">Литература к ЕНТ <i>с любовью</i> к каждому герою</h1>
+        <p class="lead">${WEEKS.length} ${plural(WEEKS.length,'неделя','недели','недель')}, ${ALL.length} ${plural(ALL.length,'урок','урока','уроков')}. Видеоуроки, конспекты и тесты в формате ЕНТ в одном месте.</p>
         <div class="stream" role="group" aria-label="Мой поток">${sb('2')}${sb('3')}</div>
-        ${st ? '' : '<p class="promo-hint">Выбери свой поток, и я покажу твою неделю</p>'}
-        ${next ? `<a class="btn promo-btn" href="#/lesson/${next.id}">${doneAll ? 'Продолжить обучение' : 'Начать обучение'} →</a>` : ''}
+        ${st ? '' : '<p style="margin:10px 0 0;font-size:13px;color:var(--label);font-weight:600">Выбери свой поток, и я покажу твою неделю</p>'}
       </div>
       <div class="promo-pic">
         <figure class="polaroid"><div class="tape tape-stripe" aria-hidden="true"></div><img src="dilya.jpg" alt="Диля, преподаватель литературы"><figcaption>с любовью, ваша Диля</figcaption></figure>
-        <div class="badge b1"><b>${ALL.length}</b><span>${plural(ALL.length,'урок','урока','уроков')} с конспектами</span></div>
-        <div class="badge b2"><b>${(LESSONS.reduce((n, L) => n + (L.questions ? L.questions.length : 0), 0)).toLocaleString('ru-RU')}</b><span>заданий в формате ЕНТ</span></div>
       </div>
     </section>
     <div class="hello2">
