@@ -443,6 +443,36 @@ function checkBadges(){
 let installEv = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEv = e; });
 function isStandalone(){ return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone; }
+let RATING = null;
+function loadRating(){
+  if (!(CONFIG.api && store.code)) { RATING = null; drawRating(); return; }
+  if (RATING) drawRating();
+  api({ action: 'board', code: store.code }).then(r => { if (r.ok) { RATING = r.list || []; drawRating(); } }).catch(() => drawRating());
+}
+function drawRating(){
+  const box = document.getElementById('rbox'); if (!box) return;
+  const mode = renderMe.rt || 'week';
+  const me = { name: firstName() || 'Ты', me: true, weekXp: weekXp(), streak: streak(), best: store.best || 0, xp: xpTotal(), frame: myFrame(), pose: myPose() };
+  if (!RATING) {
+    box.innerHTML = `<div class="myplace"><span class="num">?</span><div><b>Рейтинг откроется, когда включим личные кабинеты</b><span>Тогда здесь будет видно, на каком ты месте в своём потоке, и кто рядом</span></div></div>
+      <div class="rlist"><div class="rrow mine"><span class="rp">1</span>${AVATAR(44, me.frame, me.pose)}<span class="rn">${esc(me.name)} (ты)</span><span class="rv">${valTxt(me, mode)}</span></div></div>`;
+    return;
+  }
+  const list = RATING.map(x => x.me ? Object.assign({}, x, me, { name: x.name }) : x);
+  if (!list.some(x => x.me)) list.push(me);
+  const key = mode === 'week' ? 'weekXp' : mode === 'streak' ? 'streak' : 'xp';
+  list.sort((a, b) => (b[key] || 0) - (a[key] || 0) || (b.best || 0) - (a.best || 0));
+  const mi = list.findIndex(x => x.me), place = mi + 1, n = list.length;
+  const ahead = mi > 0 ? list[mi - 1] : null, gap = ahead ? (ahead[key] || 0) - (list[mi][key] || 0) : 0;
+  const unit = mode === 'streak' ? plural(gap + 1, 'день', 'дня', 'дней') : 'XP';
+  const sub = place === 1 ? (n > 1 ? 'Ты на первом месте! Держи корону 👑' : 'Пока ты одна в рейтинге')
+    : `До ${place - 1} места: ${mode === 'streak' ? (gap + 1) + ' ' + unit + ' подряд' : (gap + 1) + ' ' + unit}. Ты сможешь!`;
+  const row = (x, i) => `<div class="rrow${x.me ? ' mine' : ''}${i < 3 ? ' top' : ''}"><span class="rp">${i + 1}</span>${AVATAR(44, x.frame, x.pose)}<span class="rn">${esc(x.name)}${x.me ? ' (ты)' : ''}</span><span class="rv">${valTxt(x, mode)}</span></div>`;
+  let rows = list.slice(0, 10).map(row).join('');
+  if (mi >= 10) rows += '<div class="rgap">· · ·</div>' + row(list[mi], mi);
+  box.innerHTML = `<div class="myplace"><span class="num">${place}</span><div><b>${place} место из ${n}</b><span>${esc(sub)}</span></div></div><div class="rlist">${rows}</div>`;
+}
+function valTxt(x, mode){ return mode === 'week' ? (x.weekXp || 0) + ' XP' : mode === 'streak' ? '🔥 ' + (x.streak || 0) : '⚡ ' + (x.xp || 0); }
 function avItems(t){
   if (t === 'f') return FRAMES.map(f => { const ok = frameOwned(f.k), on = myFrame() === f.k; return `<button class="avit${on ? ' on' : ''}${ok ? '' : ' lock'}" data-av="f:${f.k}" ${ok ? '' : 'disabled'}>${AVATAR(96, f.k, myPose())}<b>${esc(f.name)}</b>${ok ? '' : `<small>🔒 ${esc(f.cond)} или в сундучке</small>`}</button>`; }).join('');
   if (t === 'p') return POSES.map(p => { const ok = poseOwned(p.k), on = myPose() === p.k; return `<button class="avit${on ? ' on' : ''}${ok ? '' : ' lock'}" data-av="p:${p.k}" ${ok ? '' : 'disabled'}><span class="avpose"><img src="mascot/${p.k}.svg" alt=""></span><b>${esc(p.name)}</b>${ok ? '' : '<small>🔒 в сундучке</small>'}</button>`; }).join('');
@@ -513,8 +543,15 @@ function renderMe(){
       </div>
       ${CONFIG.api && store.code ? `<div class="card"><h3>🔔 Напоминания в Телеграме</h3><p class="muted">Диля напишет, если серия под угрозой. Нажми и отправь боту «Start».</p><a class="dbtn" href="https://t.me/${CONFIG.bot}?start=${encodeURIComponent(store.code)}" target="_blank" rel="noopener">Подключить</a></div>` : ''}
     </div>
+    <div class="sec-title" id="rating"><h2>Рейтинг</h2><span class="script">${store.stream ? store.stream + ' поток' : 'мой поток'}</span></div>
+    <div class="card rate">
+      <div class="stream rtabs" role="group">${[['week', 'Лига недели'], ['streak', 'Серии'], ['xp', 'За всё время']].map(([k, t]) => `<button type="button" data-rt="${k}" aria-pressed="${(renderMe.rt || 'week') === k}">${t}</button>`).join('')}</div>
+      <div id="rbox"><p class="muted">Загружаем…</p></div>
+    </div>
     ${store.code ? '<p style="text-align:center;margin:30px 0 0"><button class="btn btn-light" onclick="logout()">Выйти из кабинета</button></p>' : ''}
   </div>`;
+  app.querySelectorAll('[data-rt]').forEach(b => b.addEventListener('click', () => { renderMe.rt = b.dataset.rt; app.querySelectorAll('[data-rt]').forEach(x => x.setAttribute('aria-pressed', x === b)); drawRating(); }));
+  loadRating();
   app.querySelectorAll('[data-avt]').forEach(b => b.addEventListener('click', () => { renderMe.tab = b.dataset.avt; renderMe(); setTimeout(() => { const c = document.querySelector('.avpick'); c && c.scrollIntoView({ block: 'center' }); }, 30); }));
   app.querySelectorAll('[data-av]').forEach(b => b.addEventListener('click', () => {
     const [t, k] = b.dataset.av.split(':');

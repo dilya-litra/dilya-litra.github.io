@@ -198,13 +198,13 @@ button.ubook{background:transparent;cursor:pointer}
 
 /* профиль */
 .mehead{display:flex;gap:28px;align-items:center;padding:30px 34px}
-.mecat{width:170px;flex-shrink:0}
+.mecat{width:auto;flex-shrink:0}
 .mehead .h1{font-size:clamp(34px,5vw,52px)}
 .mestats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0 12px}
 .mestats div{padding:10px 8px;border-radius:14px;background:var(--paper);text-align:center}
 .mestats b{display:block;font-size:20px;color:var(--ink)}
 .mestats span{font-size:12px;color:var(--muted);font-weight:600}
-@media (max-width:640px){.mehead{flex-direction:column;text-align:center;padding:24px 18px}.mecat{width:140px}}
+@media (max-width:640px){.mehead{flex-direction:column;text-align:center;padding:24px 18px}.mecat{width:auto}}
 .bdgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .bdg{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:16px 10px;border-radius:18px;background:var(--cream);border:2px solid var(--line)}
 .bdg:not(.on) span{filter:grayscale(1)}
@@ -289,7 +289,7 @@ button.ubook{background:transparent;cursor:pointer}
 .ava .avin{position:absolute;left:16%;top:16%;width:68%;height:68%;border-radius:50%;overflow:hidden;background:#FFF6F8}
 .ava .avin img{position:absolute;left:2%;top:4%;width:96%}
 .ava .avf{position:absolute;inset:0;width:100%;height:100%}
-.mecat .ava{display:block}
+.mecat .ava{display:block;margin:0 auto}
 .brow .ava{margin-right:2px}
 .avpick{padding:18px}
 .avtabs{margin:0 0 14px}
@@ -356,3 +356,19 @@ body.bg-winter:after{left:0;right:0;bottom:0;height:110px;background-image:url(.
 .duoside > a.sidelink:last-child{display:flex}
 .boardl .bnm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
 .boardl .bst{font-size:14px;font-weight:800;white-space:nowrap;font-family:var(--sans);color:var(--burg)}
+
+/* ======== рейтинг в профиле ======== */
+.rate{padding:20px}
+.rate .rtabs{margin:0 0 14px}
+.myplace{display:flex;align-items:center;gap:16px;padding:16px 18px;border-radius:18px;background:var(--pink);margin-bottom:12px}
+.myplace .num{font-family:var(--serif);font-weight:700;font-size:54px;line-height:1;color:var(--burg);min-width:64px;text-align:center}
+.myplace b{display:block;font-size:17px;color:var(--ink)}
+.myplace span{font-size:13px;color:var(--muted)}
+.rlist{display:flex;flex-direction:column;gap:4px}
+.rrow{display:grid;grid-template-columns:34px 44px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-radius:14px}
+.rrow.mine{background:var(--pink)}
+.rrow .rp{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;background:var(--paper2);color:var(--burg)}
+.rrow.top .rp{background:#F2C14E;color:#6B4A0E}
+.rrow .rn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.rrow .rv{font-weight:800;color:var(--burg);white-space:nowrap}
+.rgap{text-align:center;color:var(--muted);letter-spacing:.3em;font-weight:800}
