@@ -499,6 +499,13 @@ body.duo-test header,body.duo-test footer{display:none}
 .nodewrap:has(.cur){margin-top:34px}
 .unit{position:relative;z-index:1}.unit:has(.nodewrap.open){z-index:50}
 
+img.cat{display:block;width:100%;height:auto}
+.sheetcat{width:64px;flex-shrink:0}
+@media (max-width:520px){.sheetcat{width:48px}}
+.catcard .cat{width:96px}
+.pathcat{width:120px}
+.endbox .cat{width:190px}
+
 </style>
 </head>
 <body>
@@ -17333,22 +17340,8 @@ route = function(){
 headerUser();
 
 /* ===== РЕЖИМ DUOLINGO ===== */
-const MASCOT = (mood) => `<svg class="cat ${mood || ''}" viewBox="0 0 120 120" aria-hidden="true">
-  <path d="M28 40 L34 12 L52 32 Z" fill="#E7C3BC"/><path d="M92 40 L86 12 L68 32 Z" fill="#E7C3BC"/>
-  <path d="M33 34 L36 20 L46 31 Z" fill="#F4A9B4"/><path d="M87 34 L84 20 L74 31 Z" fill="#F4A9B4"/>
-  <ellipse cx="60" cy="62" rx="40" ry="36" fill="#F3DDD6"/>
-  <ellipse cx="60" cy="100" rx="30" ry="16" fill="#F3DDD6"/>
-  <circle cx="45" cy="60" r="11" fill="#fff" stroke="#6B2633" stroke-width="3"/><circle cx="75" cy="60" r="11" fill="#fff" stroke="#6B2633" stroke-width="3"/>
-  <path d="M56 60 h8" stroke="#6B2633" stroke-width="3"/>
-  ${mood === 'sad' ? '<path d="M40 62 q5 -5 10 0" stroke="#2B1B19" stroke-width="3" fill="none"/><path d="M70 62 q5 -5 10 0" stroke="#2B1B19" stroke-width="3" fill="none"/>'
-    : '<circle cx="46" cy="61" r="4.5" fill="#2B1B19"/><circle cx="74" cy="61" r="4.5" fill="#2B1B19"/><circle cx="47.5" cy="59.5" r="1.5" fill="#fff"/><circle cx="75.5" cy="59.5" r="1.5" fill="#fff"/>'}
-  <ellipse cx="34" cy="74" rx="6" ry="3.5" fill="#F4A9B4" opacity=".8"/><ellipse cx="86" cy="74" rx="6" ry="3.5" fill="#F4A9B4" opacity=".8"/>
-  <path d="M57 72 L63 72 L60 75 Z" fill="#C46A78"/>
-  ${mood === 'sad' ? '<path d="M53 83 q7 -5 14 0" stroke="#6B2633" stroke-width="2.5" fill="none"/>' : '<path d="M53 79 q3.5 4 7 0 q3.5 4 7 0" stroke="#6B2633" stroke-width="2.5" fill="none"/>'}
-  <rect x="38" y="92" width="44" height="22" rx="3" fill="#6B2633"/><rect x="41" y="94" width="38" height="18" rx="2" fill="#FFFCF8"/><path d="M60 94 v18" stroke="#D9A3AA" stroke-width="2"/>
-  <path d="M46 99 h10 M46 103 h10 M64 99 h10 M64 103 h8" stroke="#D9A3AA" stroke-width="1.5"/>
-</svg>`;
-const MASCOT_NAME = 'Онегин';
+const MASCOT = (mood) => `<img class="cat" src="mascot/${({ sad: 'sad', happy: 'happy', wave: 'wave', sleep: 'sleep' })[mood] || 'idle'}.svg" alt="" aria-hidden="true">`;
+const MASCOT_NAME = 'Диля';
 
 /* XP: 10 за видео, 10 за конспект, за тест его баллы + 10 */
 function xpTotal(){
@@ -17408,7 +17401,7 @@ function renderHome(){
         </div>
       </div>`;
     }).join('');
-    const mascot = n === cw ? `<div class="pathcat ${n % 2 ? 'r' : 'l'}">${MASCOT()}</div>` : '';
+    const mascot = n === cw ? `<div class="pathcat ${n % 2 ? 'r' : 'l'}">${MASCOT('wave')}</div>` : '';
     return `<section class="unit${n === cw ? ' curu' : ''}" id="w${n}" style="--c:${e.c}">
       <div class="ubanner"><div><p>${esc(e.name)} · неделя ${n}</p><h3>${esc(weekNames(w))}</h3></div><a href="#/w${n}" class="ubook" onclick="event.preventDefault();toggleWeek(${n})">☰</a></div>
       <div class="uweek" hidden>${w.map(x => { const L = x.id && byId(x.id); return `<a ${L ? `href="#/lesson/${L.id}"` : ''}>${x.num}. ${x.author ? '<b>' + esc(x.author) + '</b> ' : ''}${esc(x.title)}</a>`; }).join('')}</div>
@@ -17428,7 +17421,7 @@ function renderHome(){
     </main>
     <aside class="duoside">
       ${topbar()}
-      <div class="card catcard">${MASCOT()}<div><b>${MASCOT_NAME}</b><p>${esc(msg)}</p></div></div>
+      <div class="card catcard">${MASCOT(catMood())}<div><b>${MASCOT_NAME}</b><p>${esc(msg)}</p></div></div>
       <div class="card"><p class="label">Задание дня</p><h4>Заработай ${goal} XP</h4><div class="qbar"><i style="width:${Math.min(100, Math.round(tx / goal * 100))}%"></i><span>${Math.min(tx, goal)} / ${goal}</span></div></div>
       <div class="card" id="league"><p class="label">Лига недели${store.stream ? ' · ' + esc(store.stream) + ' поток' : ''}</p><h4>⚡ ${weekXp()} XP за неделю</h4><div id="leaguel" class="boardl">${CONFIG.api && store.code ? '<p class="muted">Загружаем…</p>' : '<p class="muted">Рейтинг появится, когда включим личные кабинеты. Топ-3 недели получают корону 👑</p>'}</div></div>
       ${store.code ? '' : `<div class="card"><p class="label">Мой поток</p><div class="stream" role="group">${['2','3'].map(s => `<button type="button" aria-pressed="${stream() === s}" onclick="setStream('${s}')">${s} поток</button>`).join('')}</div></div>`}
@@ -17441,6 +17434,13 @@ function renderHome(){
   }));
   if (CONFIG.api && store.code) loadLeague();
   setTimeout(() => { const m = location.hash.match(/#\/w(\d+)/); const c = m ? document.getElementById('w' + m[1]) : (document.querySelector('.node.cur') || document.getElementById('w' + cw)); if (c) c.scrollIntoView({ block: m ? 'start' : 'center' }); const pp = c && c.closest && document.querySelector('.node.cur'); }, 50);
+}
+function catMood(){
+  const days = store.days || {};
+  if (days[today()]) return 'happy';
+  const y = new Date(Date.now() - 864e5), y2 = new Date(Date.now() - 2 * 864e5);
+  if (Object.keys(days).length && !days[dkey(y)] && !days[dkey(y2)]) return 'sleep';
+  return 'wave';
 }
 function toggleWeek(n){ const u = document.querySelector('#w' + n + ' .uweek'); if (u) u.hidden = !u.hidden; }
 function loadLeague(){
@@ -17486,7 +17486,7 @@ function drawDuo(){
   if (D.checked) {
     const s = duoScore(q), m = qPoints(q), ok = s === m;
     const rightTxt = q.type === 'match' ? q.pairs.map(p => p[0] + ' → ' + p[1]).join('; ') : q.right.map(r => q.opts[r]).join('; ');
-    sheet = `<div class="sheet ${ok ? 'good' : 'bad'}"><div class="sin"><div><b>${ok ? ['Отлично!', 'Верно!', 'Умница!', 'Так держать!'][i % 4] : s ? 'Почти! +' + s + ' из ' + m : 'Не совсем'}</b>${ok ? '' : `<p>Правильно: ${esc(rightTxt)}</p>`}</div><button class="dbtn" id="dnext">Продолжить</button></div></div>`;
+    sheet = `<div class="sheet ${ok ? 'good' : 'bad'}"><div class="sin"><div class="sheetcat">${MASCOT(ok ? 'happy' : 'sad')}</div><div style="flex:1"><b>${ok ? ['Отлично!', 'Верно!', 'Умница!', 'Так держать!'][i % 4] : s ? 'Почти! +' + s + ' из ' + m : 'Не совсем'}</b>${ok ? '' : `<p>Правильно: ${esc(rightTxt)}</p>`}</div><button class="dbtn" id="dnext">Продолжить</button></div></div>`;
   }
   app.innerHTML = `
   <div class="dtest">
@@ -17528,7 +17528,7 @@ function drawDuoEnd(win){
   <div class="dtest dend">
     ${win ? '<div class="confetti" aria-hidden="true">' + Array.from({ length: 40 }, (_, k) => `<i style="left:${(k * 37) % 100}%;animation-delay:${(k % 10) * .15}s;background:${['#6B2633', '#D9A3AA', '#B0704A', '#F1D6D4', '#A9823A'][k % 5]}"></i>`).join('') + '</div>' : ''}
     <div class="endbox">
-      ${MASCOT(win ? '' : 'sad')}
+      ${MASCOT(win ? 'happy' : 'sad')}
       <h2>${win ? 'Урок пройден!' : 'Сердечки закончились 💔'}</h2>
       <p>${win ? esc(L.title) : 'Ничего страшного! Повтори конспект и попробуй ещё раз.'}</p>
       ${win ? `<div class="endstats"><div><span>Опыт</span><b>⚡ ${D.xp || 0}</b></div><div><span>Баллы</span><b>🎯 ${D.got}/${max}</b></div><div><span>Точность</span><b>💯 ${acc}%</b></div></div>` : ''}
