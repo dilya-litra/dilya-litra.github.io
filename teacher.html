@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Панель учителя · dilya.litra</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Marck+Script&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css?v=2">
+<link rel="stylesheet" href="css/app.css?v=2">
+<style>
+.tp{max-width:1200px;margin:0 auto;padding:28px 20px 60px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:16px 0}
+.kpi{padding:18px}.kpi b{display:block;font-family:var(--serif);font-size:40px;color:var(--burg);line-height:1}.kpi span{font-size:13px;color:var(--muted);font-weight:600}
+.bar2{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:20px 0 12px}
+.ttabs{display:flex;gap:6px;flex-wrap:wrap}
+.ttabs button{border:2px solid var(--line);background:var(--cream);border-radius:999px;padding:9px 16px;font-weight:800;color:var(--burg)}
+.ttabs button[aria-pressed="true"]{background:var(--burg);color:var(--cream);border-color:var(--burg)}
+.tw{overflow:auto;border-radius:18px;border:1px solid var(--line);background:var(--cream)}
+table.tt{width:100%;border-collapse:collapse;font-size:14px}
+.tt th{position:sticky;top:0;background:var(--paper2);text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--label);cursor:pointer;white-space:nowrap}
+.tt td{padding:10px 12px;border-top:1px solid var(--line);white-space:nowrap}
+.tt tr.never td{color:var(--muted)}
+.tt td.n{text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;padding:3px 8px;border-radius:8px;font-size:12px;font-weight:800}
+.tag.red{background:#FCEAEC;color:#A3303F}.tag.green{background:#EEF7EC;color:#2F6B34}.tag.gray{background:var(--paper2);color:var(--muted)}
+.hq{display:flex;flex-direction:column;gap:10px}
+.hq .card{padding:16px 18px}
+.hq h4{margin:0 0 6px;font-size:16px;line-height:1.4;color:var(--ink)}
+.hq p{margin:3px 0;font-size:14px}
+.hq .meta{display:flex;justify-content:space-between;gap:10px;font-size:12px;font-weight:700;color:var(--label);text-transform:uppercase;letter-spacing:.06em}
+.lk{max-width:440px;margin:60px auto;text-align:center}
+.lk input{font:inherit;font-size:16px;padding:14px 16px;border-radius:14px;border:2px solid var(--line);background:var(--paper);color:var(--text);width:100%;margin:14px 0}
+.demo{margin:12px 0 0;padding:10px 14px;border-radius:12px;background:#FFF5DA;color:#7A5A12;font-weight:700;font-size:14px}
+</style>
+</head>
+<body>
+<header><nav><a class="logo" href="./"><img class="mono" src="logo.jpg" alt=""><b>dilya.litra</b><span>панель учителя</span></a></nav></header>
+<div id="t" class="tp"></div>
+<script src="js/data.js?v=2"></script>
+<script>
+'use strict';
+const T = document.getElementById('t');
+const META = {}; LESSONS.forEach(L => META[L.id] = L);
+let DATA = null, FILTER = '', TAB = 'all', SORT = ['weekXp', -1], DEMO = false;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const dkey = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+const ago = k => { if (!k) return 999; const p = k.split('-').map(Number); return Math.round((new Date(new Date().toDateString()) - new Date(p[0], p[1] - 1, p[2])) / 864e5); };
+const agoTxt = k => { const a = ago(k); return a >= 999 ? 'никогда' : a === 0 ? 'сегодня' : a === 1 ? 'вчера' : a + ' дн. назад'; };
+
+function lock(err){
+  T.innerHTML = `<section class="card lk"><h1 class="h1" style="font-size:40px">Панель учителя</h1>
+    <p class="muted">${CONFIG.api ? 'Введи пароль из кода Apps Script (TEACHER_KEY)' : 'Личные кабинеты ещё не подключены, поэтому реальных данных пока нет.'}</p>
+    ${CONFIG.api ? `<form id="lf"><input id="pw" type="password" placeholder="Пароль" autocomplete="current-password"><button class="dbtn" style="width:100%">Войти</button></form>` : ''}
+    ${err ? `<p style="color:var(--bad);font-weight:700">${esc(err)}</p>` : ''}
+    <p style="margin-top:16px"><button class="btn btn-light" id="demo">Посмотреть на примере</button></p></section>`;
+  const f = document.getElementById('lf');
+  f && f.addEventListener('submit', e => { e.preventDefault(); load(document.getElementById('pw').value); });
+  document.getElementById('demo').addEventListener('click', demo);
+}
+function load(key){
+  T.innerHTML = '<div class="loading"><p>Загружаю данные…</p></div>';
+  fetch(CONFIG.api, { method: 'POST', body: JSON.stringify({ action: 'teacher', key }) }).then(r => r.json()).then(r => {
+    if (!r.ok) { sessionStorage.removeItem('tk'); return lock(r.error); }
+    sessionStorage.setItem('tk', key); DATA = r; DEMO = false; draw();
+  }).catch(() => lock('Нет связи с таблицей'));
+}
+function demo(){
+  const names = ['Азиза Н.', 'Мадина К.', 'Айлин С.', 'Дана Ж.', 'Камила Т.', 'Алина Б.', 'Сабина М.', 'Жансая Е.', 'Арайлым О.', 'Томирис А.', 'Амина Р.', 'Аружан Д.'];
+  const d = new Date(), key = n => { const x = new Date(d); x.setDate(x.getDate() - n); return dkey(x); };
+  const list = names.map((n, i) => i === 11 ? { code: 'x' + i, name: n, stream: '3', never: true } : { code: 'x' + i, name: n, stream: i % 2 ? '2' : '3', tg: i % 3 > 0, done: 10 + i * 3, tests: 10 + i * 3, avg: 60 + (i * 7) % 35, streak: i % 4 ? i + 2 : 0, best: i + 6, last: key(i % 4 ? 0 : 4 + i % 3), xp: 400 + i * 130, weekXp: (i * 47) % 260, mist: (i * 5) % 17, fixed: i * 4, mock: 25 + i % 20 });
+  const wrong = {}; ['revizor:3', 'mumu:11', 'tropy:5', 'onegin:7', 'gore:2', 'shinel:9', 'mcyri:4', 'dochka:13'].forEach((k, i) => wrong[k] = [12 - i, 9 - i]);
+  DATA = { ok: true, list, wrong, today: dkey(d) }; DEMO = true; draw();
+}
+function rows(){ return DATA.list.filter(s => !FILTER || s.stream === FILTER); }
+function draw(){
+  const L = rows(), act = L.filter(s => !s.never), today = act.filter(s => ago(s.last) === 0).length;
+  const stuck = L.filter(s => s.never || ago(s.last) >= 3);
+  const avg = act.length ? Math.round(act.reduce((a, s) => a + (+s.avg || 0), 0) / act.length) : 0;
+  const mocks = act.filter(s => s.mock !== '' && s.mock != null);
+  const streams = [...new Set(DATA.list.map(s => s.stream))].sort();
+  T.innerHTML = `
+    ${DEMO ? '<p class="demo">Это пример с выдуманными ученицами. Настоящие данные появятся, когда подключим кабинеты.</p>' : ''}
+    <div class="sec-title" style="margin-top:20px"><h2>Привет, Диля!</h2><span class="script">${esc(new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }))}</span></div>
+    <div class="kpis">
+      <div class="card kpi"><b>${L.length}</b><span>учениц${FILTER ? ' в ' + FILTER + ' потоке' : ''}</span></div>
+      <div class="card kpi"><b>${today}</b><span>занимались сегодня</span></div>
+      <div class="card kpi"><b>${stuck.length}</b><span>застряли (3+ дня)</span></div>
+      <div class="card kpi"><b>${avg}%</b><span>средний балл тестов</span></div>
+      <div class="card kpi"><b>${mocks.length ? Math.round(mocks.reduce((a, s) => a + +s.mock, 0) / mocks.length) : '-'}</b><span>средний пробник из 50</span></div>
+    </div>
+    <div class="bar2">
+      <div class="ttabs">${[['all', 'Все ученицы'], ['stuck', 'Застряли (' + stuck.length + ')'], ['hard', 'Трудные вопросы']].map(([k, t]) => `<button data-tab="${k}" aria-pressed="${TAB === k}">${t}</button>`).join('')}</div>
+      <div class="stream" style="margin:0">${[''].concat(streams).map(s => `<button data-f="${s}" aria-pressed="${FILTER === s}">${s ? s + ' поток' : 'Все'}</button>`).join('')}</div>
+    </div>
+    <div id="body"></div>`;
+  T.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; draw(); });
+  T.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { FILTER = b.dataset.f; draw(); });
+  const B = document.getElementById('body');
+  if (TAB === 'hard') return hard(B);
+  const list = (TAB === 'stuck' ? stuck : L).slice();
+  const cols = [['name', 'Имя'], ['stream', 'Поток'], ['last', 'Была'], ['streak', 'Серия'], ['weekXp', 'XP неделя'], ['xp', 'XP всего'], ['done', 'Уроков'], ['avg', 'Ср. %'], ['mist', 'Ошибок ждут'], ['fixed', 'Исправила'], ['mock', 'Пробник'], ['tg', 'Бот']];
+  const [k, dir] = SORT;
+  list.sort((a, b) => { const x = k === 'last' ? -ago(a.last) : a[k], y = k === 'last' ? -ago(b.last) : b[k]; if (a.never !== b.never) return a.never ? 1 : -1; return (x > y ? 1 : x < y ? -1 : 0) * dir; });
+  B.innerHTML = `<div class="tw"><table class="tt"><thead><tr>${cols.map(([c, t]) => `<th data-s="${c}">${t}${k === c ? (dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('')}</tr></thead><tbody>
+    ${list.map(s => s.never ? `<tr class="never"><td><b>${esc(s.name)}</b></td><td>${esc(s.stream)}</td><td colspan="10"><span class="tag gray">ещё не входила</span> код: <code>${esc(s.code)}</code></td></tr>`
+      : `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.stream)}</td><td><span class="tag ${ago(s.last) >= 3 ? 'red' : ago(s.last) === 0 ? 'green' : 'gray'}">${agoTxt(s.last)}</span></td>
+        <td class="n">${s.streak ? s.streak + ' 🔥' : '0'}</td><td class="n">${s.weekXp}</td><td class="n">${s.xp}</td><td class="n">${s.done}</td><td class="n">${s.avg}%</td><td class="n">${s.mist}</td><td class="n">${s.fixed}</td><td class="n">${s.mock === '' || s.mock == null ? '-' : s.mock}</td><td>${s.tg ? '✓' : ''}</td></tr>`).join('') || '<tr><td colspan="12">Никого 🎉</td></tr>'}
+  </tbody></table></div>`;
+  B.querySelectorAll('[data-s]').forEach(th => th.onclick = () => { SORT = [th.dataset.s, SORT[0] === th.dataset.s ? -SORT[1] : -1]; draw(); });
+}
+function hard(B){
+  const top = Object.entries(DATA.wrong || {}).sort((a, b) => b[1][1] - a[1][1] || b[1][0] - a[1][0]).slice(0, 30);
+  if (!top.length) { B.innerHTML = '<div class="card"><p class="muted">Пока ошибок нет. Как только ученицы начнут проходить тесты, здесь появятся самые трудные вопросы.</p></div>'; return; }
+  B.innerHTML = '<div class="loading"><p>Загружаю вопросы…</p></div>';
+  const ids = [...new Set(top.map(([k]) => k.split(':')[0]))].filter(id => META[id]);
+  Promise.all(ids.map(id => fetch('data/l/' + id + '.json').then(r => r.json()).then(d => [id, d]))).then(arr => {
+    const Q = Object.fromEntries(arr);
+    B.innerHTML = `<p class="muted" style="margin-bottom:10px">Вопросы, в которых ошиблось больше всего учениц. Их стоит разобрать на практическом уроке.</p><div class="hq">${top.map(([k, [n, people]]) => {
+      const [id, qi] = k.split(':'), q = Q[id] && Q[id].questions[+qi]; if (!q) return '';
+      const right = q.type === 'match' ? q.pairs.map(p => p[0] + ' → ' + p[1]).join('; ') : q.right.map(i => q.opts[i]).join('; ');
+      return `<div class="card"><div class="meta"><span>${esc(META[id].title)} · ${esc(META[id].author)}</span><span>ошиблись: ${people} ${people === 1 ? 'ученица' : people < 5 ? 'ученицы' : 'учениц'} · ${n} раз</span></div><h4>${esc(q.text)}</h4><p style="color:var(--ok)">✓ ${esc(right)}</p></div>`;
+    }).join('')}</div>`;
+  });
+}
+const saved = sessionStorage.getItem('tk');
+if (CONFIG.api && saved) load(saved); else lock();
+</script>
+</body>
+</html>
