@@ -372,3 +372,8 @@ body.bg-winter:after{left:0;right:0;bottom:0;height:110px;background-image:url(.
 .rrow .rn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
 .rrow .rv{font-weight:800;color:var(--burg);white-space:nowrap}
 .rgap{text-align:center;color:var(--muted);letter-spacing:.3em;font-weight:800}
+
+#league{position:relative}
+.morelink{position:absolute;right:16px;top:16px;font-size:12px;font-weight:800;color:var(--burg);text-decoration:none}
+.pagehead .ava{flex-shrink:0}
+@media (max-width:760px){.bnav a{font-size:10px;margin:6px 1px}.bnav a span{font-size:22px}}

@@ -444,6 +444,24 @@ let installEv = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEv = e; });
 function isStandalone(){ return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone; }
 let RATING = null;
+function renderRating(){
+  document.body.classList.remove('duo-test');
+  const mode = renderRating.rt || 'week';
+  app.innerHTML = `
+  <div class="wrap page">
+    <section class="card pagehead">
+      ${AVATAR(130, myFrame(), myPose())}
+      <div><p class="label">${store.stream ? esc(store.stream) + ' поток' : 'Мой поток'}</p><h1 class="h1">Рейтинг</h1>
+      <p class="lead">Кто больше всех занимается на этой неделе, у кого самая длинная серия и кто набрал больше всего опыта за всё время. Топ-3 недели получают корону и рамку «Королева лиги» 👑</p></div>
+    </section>
+    <div class="card rate">
+      <div class="stream rtabs" role="group">${[['week', 'Лига недели'], ['streak', 'Серии'], ['xp', 'За всё время']].map(([k, t]) => `<button type="button" data-rt="${k}" aria-pressed="${mode === k}">${t}</button>`).join('')}</div>
+      <div id="rbox"><p class="muted">Загружаем…</p></div>
+    </div>
+  </div>`;
+  app.querySelectorAll('[data-rt]').forEach(b => b.addEventListener('click', () => { renderRating.rt = b.dataset.rt; app.querySelectorAll('[data-rt]').forEach(x => x.setAttribute('aria-pressed', x === b)); sfx('tap'); drawRating(); }));
+  loadRating();
+}
 function loadRating(){
   if (!(CONFIG.api && store.code)) { RATING = null; drawRating(); return; }
   if (RATING) drawRating();
@@ -451,11 +469,11 @@ function loadRating(){
 }
 function drawRating(){
   const box = document.getElementById('rbox'); if (!box) return;
-  const mode = renderMe.rt || 'week';
-  const me = { name: firstName() || 'Ты', me: true, weekXp: weekXp(), streak: streak(), best: store.best || 0, xp: xpTotal(), frame: myFrame(), pose: myPose() };
+  const mode = renderRating.rt || 'week';
+  const me = { name: firstName() || 'Это ты', me: true, weekXp: weekXp(), streak: streak(), best: store.best || 0, xp: xpTotal(), frame: myFrame(), pose: myPose() };
   if (!RATING) {
     box.innerHTML = `<div class="myplace"><span class="num">?</span><div><b>Рейтинг откроется, когда включим личные кабинеты</b><span>Тогда здесь будет видно, на каком ты месте в своём потоке, и кто рядом</span></div></div>
-      <div class="rlist"><div class="rrow mine"><span class="rp">1</span>${AVATAR(44, me.frame, me.pose)}<span class="rn">${esc(me.name)} (ты)</span><span class="rv">${valTxt(me, mode)}</span></div></div>`;
+      <div class="rlist"><div class="rrow mine"><span class="rp">1</span>${AVATAR(44, me.frame, me.pose)}<span class="rn">${esc(me.name)}${firstName() ? ' (ты)' : ''}</span><span class="rv">${valTxt(me, mode)}</span></div></div>`;
     return;
   }
   const list = RATING.map(x => x.me ? Object.assign({}, x, me, { name: x.name }) : x);
@@ -543,15 +561,8 @@ function renderMe(){
       </div>
       ${CONFIG.api && store.code ? `<div class="card"><h3>🔔 Напоминания в Телеграме</h3><p class="muted">Диля напишет, если серия под угрозой. Нажми и отправь боту «Start».</p><a class="dbtn" href="https://t.me/${CONFIG.bot}?start=${encodeURIComponent(store.code)}" target="_blank" rel="noopener">Подключить</a></div>` : ''}
     </div>
-    <div class="sec-title" id="rating"><h2>Рейтинг</h2><span class="script">${store.stream ? store.stream + ' поток' : 'мой поток'}</span></div>
-    <div class="card rate">
-      <div class="stream rtabs" role="group">${[['week', 'Лига недели'], ['streak', 'Серии'], ['xp', 'За всё время']].map(([k, t]) => `<button type="button" data-rt="${k}" aria-pressed="${(renderMe.rt || 'week') === k}">${t}</button>`).join('')}</div>
-      <div id="rbox"><p class="muted">Загружаем…</p></div>
-    </div>
     ${store.code ? '<p style="text-align:center;margin:30px 0 0"><button class="btn btn-light" onclick="logout()">Выйти из кабинета</button></p>' : ''}
   </div>`;
-  app.querySelectorAll('[data-rt]').forEach(b => b.addEventListener('click', () => { renderMe.rt = b.dataset.rt; app.querySelectorAll('[data-rt]').forEach(x => x.setAttribute('aria-pressed', x === b)); drawRating(); }));
-  loadRating();
   app.querySelectorAll('[data-avt]').forEach(b => b.addEventListener('click', () => { renderMe.tab = b.dataset.avt; renderMe(); setTimeout(() => { const c = document.querySelector('.avpick'); c && c.scrollIntoView({ block: 'center' }); }, 30); }));
   app.querySelectorAll('[data-av]').forEach(b => b.addEventListener('click', () => {
     const [t, k] = b.dataset.av.split(':');
@@ -580,7 +591,7 @@ function setPathBg(on){
   const k = store.pathbg; if (on && k && bgOwned(k)) document.body.classList.add('bg-' + k);
 }
 function setNav(h){
-  const cur = h === 'review' ? 'review' : h === 'mock' ? 'mock' : h === 'games' ? 'games' : h === 'me' ? 'me' : h === 'map' ? 'map' : 'home';
+  const cur = ['review', 'mock', 'games', 'me', 'map', 'rating'].includes(h) ? h : 'home';
   document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === cur));
   const n = dueMistakes().length;
   document.querySelectorAll('.navdot').forEach(d => { d.textContent = n; d.hidden = !n; });
@@ -599,6 +610,7 @@ function route(){
   else if (h[0] === 'map' || h[0] === 'schedule' || h[0] === 'points') { renderMap(); if (h[0] !== 'map') { const el = document.getElementById(h[0]); el && setTimeout(() => el.scrollIntoView(), 30); return; } }
   else if (h[0] === 'games') { if (h[1]) { startGame(h[1]); window.scrollTo(0, 0); return; } renderGames(); }
   else if (h[0] === 'me') renderMe();
+  else if (h[0] === 'rating') renderRating();
   else { setPathBg(true); renderHome(); return; }
   window.scrollTo(0, 0);
 }
