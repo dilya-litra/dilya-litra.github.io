@@ -283,3 +283,76 @@ button.ubook{background:transparent;cursor:pointer}
 [data-theme="dark"] .qbar span{color:#fff}
 @media print{[data-theme="dark"]{--paper:#fff;--cream:#fff;--ink:#000;--text:#111;--burg:#6B2633;--muted:#444}}
 @media print{.bnav,#toasts,header,footer{display:none!important}}
+
+/* ======== АВАТАРКА: рамка + поза ======== */
+.ava{position:relative;display:inline-block;width:var(--s);height:var(--s);flex-shrink:0;vertical-align:middle}
+.ava .avin{position:absolute;left:16%;top:16%;width:68%;height:68%;border-radius:50%;overflow:hidden;background:#FFF6F8}
+.ava .avin img{position:absolute;left:2%;top:4%;width:96%}
+.ava .avf{position:absolute;inset:0;width:100%;height:100%}
+.mecat .ava{display:block}
+.brow .ava{margin-right:2px}
+.avpick{padding:18px}
+.avtabs{margin:0 0 14px}
+.avgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.avit{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:18px;border:2px solid var(--line);border-bottom-width:5px;background:var(--cream);color:var(--text);cursor:pointer}
+.avit b{font-size:13px;line-height:1.2;text-align:center}
+.avit small{font-size:11px;color:var(--muted);font-weight:700;text-align:center;line-height:1.3}
+.avit.on{border-color:#E8A6B0;background:#FBEDEF}
+.avit.lock{cursor:default}
+.avit.lock .ava,.avit.lock .avpose,.avit.lock .rbg{filter:grayscale(.8);opacity:.55}
+.avpose{display:flex;align-items:flex-end;justify-content:center;width:96px;height:96px;border-radius:50%;background:#FFF1F4;overflow:hidden}
+.avpose img{width:92px;margin-bottom:-4px}
+.rbg{display:block;width:96px;height:96px;border-radius:22px;border:2px solid var(--line);background-size:cover}
+.bgsw-def{background:radial-gradient(circle at 30% 20%,#FBE3E7,#FBF4EE 70%)}
+.bgsw-night{background:url(../img/bg/night-tile.svg) center/200px,linear-gradient(180deg,#1E1A4A,#3A2A6E 55%,#6E3F7E)}
+.bgsw-sakura{background:url(../img/bg/sakura-branch-l.svg) -10px -8px/80px no-repeat,url(../img/bg/sakura-tile.svg) center/200px,linear-gradient(180deg,#FFE9F0,#FBE3EA)}
+.bgsw-winter{background:url(../img/bg/winter-hills.svg) center bottom/auto 40px repeat-x,url(../img/bg/winter-tile.svg) center/200px,linear-gradient(180deg,#CFE8F7,#F7FBFE)}
+.reward .rbg{margin:0 auto;width:120px;height:120px}
+.rx2{display:inline-flex;align-items:center;justify-content:center;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFE9A8,#F2B84B);color:#7A2B3A;font:900 46px/1 Manrope,sans-serif;box-shadow:0 8px 0 #C98A2A}
+.rpose{width:130px}
+.reward .ava{margin:0 auto}
+.pill.boost{background:#FFF1C9;color:#8A5A12;border-color:#F2D27A;font-weight:900;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.boostcard{display:flex;align-items:center;gap:16px;margin-top:16px;background:#FFF8E1;border-color:#F2D27A}
+.boostcard>b{display:flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:#F2B84B;color:#fff;font-size:26px;flex-shrink:0}
+.boostcard h3{margin:0 0 4px;color:#8A5A12}
+
+/* ======== ФОНЫ ТРОПИНКИ ======== */
+body.pathpage[class*="bg-"]{background-attachment:fixed}
+body.pathpage[class*="bg-"]:before,body.pathpage[class*="bg-"]:after{content:"";position:fixed;pointer-events:none;z-index:0;background-repeat:no-repeat}
+body.pathpage[class*="bg-"] #app{position:relative;z-index:1}
+/* звёздная ночь */
+body.pathpage.bg-night{background:url(../img/bg/night-tile.svg) 0 0/390px repeat,linear-gradient(180deg,#1E1A4A,#3A2A6E 55%,#6E3F7E) fixed !important;background-attachment:fixed !important}
+body.bg-night:before{left:3vw;top:110px;width:140px;height:140px;background-image:url(../img/bg/night-moon.svg)}
+body.bg-night footer,body.bg-night footer *{color:#CFC4F2 !important}
+.bg-night .unit .ubanner{background:#5B3E9E;box-shadow:0 5px 0 #3E2A7A}
+.bg-night .node{background:rgba(255,255,255,.16);box-shadow:0 7px 0 rgba(0,0,0,.25);color:rgba(255,255,255,.55)}
+.bg-night .node.done{background:#F2C14E;box-shadow:0 7px 0 #B8862A;color:#fff}
+.bg-night .node.part{background:#8C78C9;box-shadow:0 7px 0 #5B3E9E;color:#fff}
+.bg-night .node.cur{background:#F27C97;box-shadow:0 7px 0 #B4465E,0 0 0 8px rgba(242,124,151,.25);color:#fff}
+.bg-night .uweek{background:rgba(30,26,74,.85);color:#E8E2FF}
+.bg-night .uweek a{color:#E8E2FF}
+.bg-night .chest.locked .chsvg{filter:grayscale(.6) brightness(.85)}
+/* сакура */
+body.pathpage.bg-sakura{background:url(../img/bg/sakura-tile.svg) 0 0/390px repeat,linear-gradient(180deg,#FFE9F0,#FDF4F1 60%,#FBE3EA) !important;background-attachment:fixed !important}
+body.bg-sakura:before{left:0;top:56px;width:220px;height:204px;background-image:url(../img/bg/sakura-branch-l.svg);background-size:contain}
+body.bg-sakura:after{right:0;top:56px;width:220px;height:204px;background-image:url(../img/bg/sakura-branch-r.svg);background-size:contain}
+.bg-sakura .unit .ubanner{background:#D9657F;box-shadow:0 5px 0 #A9485F}
+.bg-sakura .node{background:#F3DDE2;box-shadow:0 7px 0 #E2C3CA;color:#B99098}
+.bg-sakura .node.done{background:#F27C97;box-shadow:0 7px 0 #B4465E;color:#fff}
+.bg-sakura .node.part{background:#F9B9C8;box-shadow:0 7px 0 #E58AA0;color:#fff}
+.bg-sakura .node.cur{background:#8A3442;box-shadow:0 7px 0 #5A1E2A,0 0 0 8px rgba(138,52,66,.18);color:#fff}
+/* зимняя сказка */
+body.pathpage.bg-winter{background:url(../img/bg/winter-tile.svg) 0 0/390px repeat,linear-gradient(180deg,#CFE8F7,#EAF5FC 60%,#F7FBFE) !important;background-attachment:fixed !important}
+body.bg-winter:after{left:0;right:0;bottom:0;height:110px;background-image:url(../img/bg/winter-hills.svg);background-size:auto 110px;background-repeat:repeat-x;background-position:center bottom}
+.bg-winter .unit .ubanner{background:#4C8DC4;box-shadow:0 5px 0 #2F6A9E}
+.bg-winter .node{background:#fff;box-shadow:0 7px 0 #C9DDEA;color:#9DB6C6}
+.bg-winter .node.done{background:#7CC3EA;box-shadow:0 7px 0 #3F8CB8;color:#fff}
+.bg-winter .node.part{background:#BFE2F5;box-shadow:0 7px 0 #7CC3EA;color:#2F6A9E}
+.bg-winter .node.cur{background:#F27C97;box-shadow:0 7px 0 #B4465E,0 0 0 8px rgba(242,124,151,.22);color:#fff}
+@media (max-width:760px){body.bg-winter:after{bottom:calc(var(--navh) + env(safe-area-inset-bottom));height:70px;background-size:auto 70px}body.bg-sakura:before,body.bg-sakura:after{width:140px;height:130px}}
+.boardl .brow{grid-template-columns:30px 34px 1fr auto auto;gap:8px;padding:8px 10px}
+.boardl .bbe{font-size:12px;color:var(--muted)}
+.duoside > a.sidelink:last-child{display:flex}
+.boardl .bnm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.boardl .bst{font-size:14px;font-weight:800;white-space:nowrap;font-family:var(--sans);color:var(--burg)}

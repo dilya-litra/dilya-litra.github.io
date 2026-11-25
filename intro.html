@@ -51,6 +51,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#FBE6EC}
    Заставка dilya.litra: полёт над кубическим миром
    ========================================================= */
 const NEXT = './';
+try { const _d = new Date(); localStorage.setItem('dilyaIntro', _d.getFullYear() + '-' + (_d.getMonth() + 1) + '-' + _d.getDate()); } catch (e) {}
 const cv = document.getElementById('gl');
 const gl = cv.getContext('webgl', { antialias: true, alpha: true, premultipliedAlpha: false });
 const uintExt = gl && gl.getExtension('OES_element_index_uint');

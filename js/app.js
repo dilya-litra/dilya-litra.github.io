@@ -64,7 +64,8 @@ const GOAL = 30;
 function persist(){ try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
 function save(active){
   if (active !== false) { store.days = store.days || {}; store.days[today()] = 1; }
-  const t = xpTotal(), prev = store.xpPrev == null ? t : store.xpPrev, tx0 = todayXp();
+  let t = xpTotal(); const prev = store.xpPrev == null ? t : store.xpPrev, tx0 = todayXp();
+  if (t > prev && boostOn()) { const d = t - prev; addBonus(d); t += d; }
   if (t > prev) {
     store.xpLog = store.xpLog || {}; store.xpLog[today()] = tx0 + (t - prev);
     if (tx0 < GOAL && todayXp() >= GOAL) setTimeout(() => { toast('🎯', 'Задание дня выполнено!', '+' + GOAL + ' XP за сегодня, умница'); sfx('done'); }, 600);
@@ -180,6 +181,40 @@ function MASCOT(mood, outfit, force){
 }
 const MASCOT_NAME = 'Диля';
 
+/* ---------- аватарка: рамка + поза ---------- */
+const FRAMES = [
+  { k: 'straw', name: 'Клубничная', cond: 'есть у всех', t: () => true },
+  { k: 'honey', name: 'Медовая', cond: 'серия 3 дня подряд', t: () => (store.best || 0) >= 3 },
+  { k: 'mint', name: 'Мятная с лягушонком', cond: 'пройти 10 уроков', t: () => doneCount() >= 10 },
+  { k: 'garden', name: 'Цветочный садик', cond: 'открыть 5 сундучков', t: () => Object.keys(store.chests || {}).length >= 5 },
+  { k: 'pixel', name: 'Пиксельная', cond: 'пройти 50 уроков', t: () => doneCount() >= 50 },
+  { k: 'books', name: 'Читаю!', cond: '10 тестов на максимум', t: () => Object.keys(store.perf || {}).length >= 10 },
+  { k: 'sweet', name: 'Мило', cond: 'серия 30 дней подряд', t: () => (store.best || 0) >= 30 },
+  { k: 'royal', name: 'Королева лиги', cond: 'попасть в топ-3 лиги недели', t: () => !!store.top3 }
+];
+const POSES = [
+  { k: 'idle', name: 'Обычная' }, { k: 'read', name: 'Читает' }, { k: 'sleepbook', name: 'Спит на книжке' }, { k: 'love', name: 'Влюбилась' },
+  { k: 'wow', name: 'Ух ты!' }, { k: 'think', name: 'Думает' }, { k: 'star', name: 'Отличница' }
+];
+const BGS = [{ k: '', name: 'Обычный' }, { k: 'night', name: 'Звёздная ночь' }, { k: 'sakura', name: 'Сакура' }, { k: 'winter', name: 'Зимняя сказка' }];
+function frameOwned(k){ const f = FRAMES.find(x => x.k === k); return !!f && (f.t() || !!(store.ownF || {})[k]); }
+function poseOwned(k){ return k === 'idle' || !!(store.ownP || {})[k]; }
+function bgOwned(k){ return !k || !!(store.ownB || {})[k]; }
+function myFrame(){ return frameOwned(store.frame) ? store.frame : 'straw'; }
+function myPose(){ return poseOwned(store.pose) ? store.pose : 'idle'; }
+function AVATAR(size, frame, pose){
+  frame = frame || 'straw'; pose = POSES.some(p => p.k === pose) ? pose : 'idle';
+  return `<span class="ava" style="--s:${size}px"><span class="avin"><img src="mascot/${pose}.svg" alt=""></span><img class="avf" src="img/frames/${FRAMES.some(f => f.k === frame) ? frame : 'straw'}.svg" alt=""></span>`;
+}
+function boostOn(){ return (store.boost || 0) > Date.now(); }
+function boostLeft(){ const ms = Math.max(0, (store.boost || 0) - Date.now()); return Math.floor(ms / 60e3) + ':' + String(Math.floor(ms % 60e3 / 1e3)).padStart(2, '0'); }
+setInterval(() => {
+  const els = document.querySelectorAll('.boostleft');
+  if (!els.length) return;
+  if (!boostOn()) { els.forEach(e => e.closest('.pill') && e.closest('.pill').remove()); return; }
+  els.forEach(e => e.textContent = boostLeft());
+}, 1000);
+
 /* ---------- работа над ошибками ---------- */
 const STEPS = [1, 3, 7];
 function addMistake(id, qi){
@@ -206,10 +241,10 @@ function stats(){
     done: READY_ORDER.filter(x => lessonDone(x.id)).length, tests: tests.length,
     got: tests.reduce((s, L) => s + store.lessons[L.id].test, 0), max: tests.reduce((s, L) => s + L.max, 0),
     streak: streak(), best: store.best || 0, xp: xpTotal(), weekXp: weekXp(), lastDay: lastActive(),
-    mist: mistakes().length, fixed: store.fixed || 0, mock: (store.mocks || []).slice(-1).map(m => m.score)[0] || ''
+    mist: mistakes().length, fixed: store.fixed || 0, mock: (store.mocks || []).slice(-1).map(m => m.score)[0] || '', frame: myFrame(), pose: myPose()
   };
 }
-const SYNC = ['lessons', 'days', 'best', 'bonus', 'freezes', 'frozen', 'fzAt', 'mist', 'fixed', 'badges', 'owned', 'outfit', 'mocks', 'games', 'chests', 'spare', 'xpLog', 'gxp', 'perf', 'kindN', 'gameRight'];
+const SYNC = ['lessons', 'days', 'best', 'bonus', 'freezes', 'frozen', 'fzAt', 'mist', 'fixed', 'badges', 'owned', 'outfit', 'mocks', 'games', 'chests', 'spare', 'xpLog', 'gxp', 'perf', 'kindN', 'gameRight', 'ownF', 'ownP', 'ownB', 'frame', 'pose', 'pathbg', 'boost', 'top3'];
 let pushTimer = null;
 function push(){
   if (!CONFIG.api || !store.code) return;
@@ -227,7 +262,7 @@ function mergeRemote(d){
   const max = k => Math.max(store[k] || 0, d[k] || 0);
   const mocks = (d.mocks || []).concat(store.mocks || []).filter((m, i, a) => a.findIndex(x => x.d === m.d && x.score === m.score) === i).slice(-30);
   return { lessons, days: obj('days'), frozen: obj('frozen'), mist: Object.assign({}, d.mist || {}, store.mist || {}), badges: obj('badges'), owned: obj('owned'), chests: obj('chests'), games: obj('games'), xpLog: obj('xpLog'), gxp: obj('gxp'),
-    perf: obj('perf'), kindN: max('kindN'), gameRight: max('gameRight'), best: max('best'), bonus: max('bonus'), freezes: max('freezes'), fixed: max('fixed'), spare: max('spare'), outfit: store.outfit || d.outfit, mocks };
+    perf: obj('perf'), ownF: obj('ownF'), ownP: obj('ownP'), ownB: obj('ownB'), frame: store.frame || d.frame, pose: store.pose || d.pose, pathbg: store.pathbg != null ? store.pathbg : d.pathbg, boost: max('boost'), top3: store.top3 || d.top3, kindN: max('kindN'), gameRight: max('gameRight'), best: max('best'), bonus: max('bonus'), freezes: max('freezes'), fixed: max('fixed'), spare: max('spare'), outfit: store.outfit || d.outfit, mocks };
 }
 function renderLogin(err){
   app.innerHTML = `
@@ -271,6 +306,7 @@ function topbar(){
     <a class="pill fire${store.days && store.days[today()] ? '' : ' off'}" href="#/me" title="Серия: дней подряд">🔥 ${sk}</a>
     <a class="pill ice" href="#/me" title="Заморозки серии">❄️ ${fz}</a>
     <a class="pill xp" href="#/me" title="Опыт">⚡ ${xpTotal()}</a>
+    ${boostOn() ? '<span class="pill boost" title="Двойной опыт">x2 <b class="boostleft">' + boostLeft() + '</b></span>' : ''}
   </div>`;
 }
 function weekReady(n){ return WEEKS[n - 1].filter(x => x.id && byId(x.id)); }
@@ -364,7 +400,8 @@ function loadLeague(){
   api({ action: 'board', code: store.code }).then(r => {
     const el = document.getElementById('leaguel'); if (!el || !r.ok) return;
     const list = (r.list || []).slice().sort((a, b) => (b.weekXp || 0) - (a.weekXp || 0));
-    el.innerHTML = list.slice(0, 10).map((x, i) => `<div class="brow${x.me ? ' mine' : ''}"><span class="bpl">${i < 3 ? '👑' : i + 1}</span><span class="bnm">${esc(x.name)}${x.me ? ' (ты)' : ''}</span><span class="bst">${x.weekXp || 0} XP</span><span class="bbe">🔥 ${x.streak}</span></div>`).join('') || '<p class="muted">Пока пусто. Будь первой!</p>';
+    const meI = list.findIndex(x => x.me); if (meI >= 0 && meI < 3 && (list[meI].weekXp || 0) > 0 && !store.top3) { store.top3 = 1; persist(); setTimeout(checkBadges, 300); }
+    el.innerHTML = list.slice(0, 10).map((x, i) => `<div class="brow${x.me ? ' mine' : ''}"><span class="bpl">${i < 3 ? '👑' : i + 1}</span>${AVATAR(34, x.me ? myFrame() : x.frame, x.me ? myPose() : x.pose)}<span class="bnm">${esc(x.name)}${x.me ? ' (ты)' : ''}</span><span class="bst">${x.weekXp || 0} XP</span><span class="bbe">🔥 ${x.streak}</span></div>`).join('') || '<p class="muted">Пока пусто. Будь первой!</p>';
   }).catch(() => {});
 }
 
@@ -373,17 +410,9 @@ function openChest(n){
   const st = chestState(n);
   if (st === 'locked') { const left = weekReady(n).filter(x => !lessonDone(x.id)).length; toast('🔒', 'Сундучок недели ' + n + ' закрыт', 'Пройди ещё ' + left + ' ' + plural(left, 'урок', 'урока', 'уроков') + ' этой недели, и ключик Дили его откроет'); return; }
   if (st === 'open') { const r = store.chests[n]; toast('🎁', 'Уже открыт', 'Там было: ' + rewardText(r)); return; }
-  const locked = OUTFITS.filter(o => !owned(o.k));
-  const roll = Math.random(); let r;
-  if (roll < 0.15 && (store.freezes || 0) < 2) r = { t: 'freeze' };
-  else if (roll < 0.3) r = { t: 'heart' };
-  else if (roll < 0.45 && locked.length) r = { t: 'outfit', k: locked[0].k };
-  else r = { t: 'xp', v: pick([20, 30, 30, 50]) };
+  const r = rollReward();
   store.chests = store.chests || {}; store.chests[n] = r;
-  if (r.t === 'freeze') store.freezes = (store.freezes || 0) + 1;
-  if (r.t === 'heart') store.spare = Math.min(3, (store.spare || 0) + 1);
-  if (r.t === 'outfit') { store.owned = store.owned || {}; store.owned[r.k] = 1; }
-  if (r.t === 'xp') addBonus(r.v);
+  giveReward(r);
   save(false);
   const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `<div class="chestbox"><div class="bigchest">${chestSvg(false)}<svg class="key" viewBox="0 0 60 24" aria-hidden="true"><circle cx="10" cy="12" r="8" fill="none" stroke="#C9912A" stroke-width="5"/><path d="M18 12h38M46 12v8M54 12v6" stroke="#C9912A" stroke-width="5" stroke-linecap="round"/></svg></div>
@@ -395,13 +424,47 @@ function openChest(n){
   setTimeout(() => { ov.querySelector('.reward').hidden = false; }, 1900);
   ov.addEventListener('click', e => { if (e.target.id === 'rok' || e.target === ov) { ov.remove(); route(); } });
 }
-function rewardIcon(r){ return r.t === 'freeze' ? '❄️' : r.t === 'heart' ? '❤️' : r.t === 'outfit' ? MASCOT('happy', r.k, true) : '⚡'; }
-function rewardTitle(r){ return r.t === 'freeze' ? 'Заморозка серии!' : r.t === 'heart' ? 'Запасное сердечко!' : r.t === 'outfit' ? 'Новый наряд для Дили!' : '+' + r.v + ' XP!'; }
+function rollReward(){
+  const opts = [];
+  const add = (w, r) => opts.push([w, r]);
+  add(2, { t: 'x2' });
+  const lp = POSES.filter(p => !poseOwned(p.k)); if (lp.length) add(1.6, { t: 'pose', k: pick(lp).k });
+  const lf = FRAMES.filter(f => !frameOwned(f.k) && f.k !== 'royal'); if (lf.length) add(1.4, { t: 'frame', k: pick(lf).k });
+  const lb = BGS.filter(b => !bgOwned(b.k)); if (lb.length) add(1.2, { t: 'bg', k: pick(lb).k });
+  const lo = OUTFITS.filter(o => !owned(o.k)); if (lo.length) add(.9, { t: 'outfit', k: lo[0].k });
+  if ((store.freezes || 0) < 2) add(.9, { t: 'freeze' });
+  add(.8, { t: 'heart' });
+  add(1.2, { t: 'xp', v: pick([20, 30, 30, 50]) });
+  let x = Math.random() * opts.reduce((s, o) => s + o[0], 0);
+  for (const [w, r] of opts) { if ((x -= w) <= 0) return r; }
+  return opts[opts.length - 1][1];
+}
+function giveReward(r){
+  if (r.t === 'freeze') store.freezes = (store.freezes || 0) + 1;
+  if (r.t === 'heart') store.spare = Math.min(3, (store.spare || 0) + 1);
+  if (r.t === 'outfit') { store.owned = store.owned || {}; store.owned[r.k] = 1; }
+  if (r.t === 'xp') addBonus(r.v);
+  if (r.t === 'x2') store.boost = Math.max(Date.now(), store.boost || 0) + 15 * 60e3;
+  if (r.t === 'pose') { store.ownP = store.ownP || {}; store.ownP[r.k] = 1; }
+  if (r.t === 'frame') { store.ownF = store.ownF || {}; store.ownF[r.k] = 1; }
+  if (r.t === 'bg') { store.ownB = store.ownB || {}; store.ownB[r.k] = 1; }
+}
+function rewardIcon(r){
+  if (r.t === 'x2') return '<span class="rx2">x2</span>';
+  if (r.t === 'pose') return `<img class="rpose" src="mascot/${r.k}.svg" alt="">`;
+  if (r.t === 'frame') return AVATAR(130, r.k, myPose());
+  if (r.t === 'bg') return `<span class="rbg bgsw-${r.k}"></span>`;
+ return r.t === 'freeze' ? '❄️' : r.t === 'heart' ? '❤️' : r.t === 'outfit' ? MASCOT('happy', r.k, true) : '⚡'; }
+function rewardTitle(r){ if (r.t === 'x2') return 'Двойной опыт!'; if (r.t === 'pose') return 'Новая Диля: ' + ((POSES.find(p => p.k === r.k) || {}).name || ''); if (r.t === 'frame') return 'Новая рамка!'; if (r.t === 'bg') return 'Новый фон для тропинки!'; return r.t === 'freeze' ? 'Заморозка серии!' : r.t === 'heart' ? 'Запасное сердечко!' : r.t === 'outfit' ? 'Новый наряд для Дили!' : '+' + r.v + ' XP!'; }
 function rewardText(r){
   if (!r) return '';
   if (r.t === 'freeze') return 'Если пропустишь день, серия не сгорит';
   if (r.t === 'heart') return 'Сработает само, когда в тесте закончатся сердечки';
   if (r.t === 'outfit') { const o = OUTFITS.find(x => x.k === r.k); return (o ? o.name : 'Наряд') + '. Надень его в профиле'; }
+  if (r.t === 'x2') return '15 минут весь опыт удваивается. Скорее проходи урок!';
+  if (r.t === 'pose') return 'Поставь её на аватарку в профиле';
+  if (r.t === 'frame') return ((FRAMES.find(f => f.k === r.k) || {}).name || '') + '. Выбери её в профиле';
+  if (r.t === 'bg') return ((BGS.find(b => b.k === r.k) || {}).name || '') + '. Включи его в профиле';
   return 'Бонусный опыт в копилку';
 }
 

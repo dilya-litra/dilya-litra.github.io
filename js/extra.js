@@ -432,6 +432,8 @@ const BADGES = [
 function checkBadges(){
   store.badges = store.badges || {}; let got = 0;
   BADGES.forEach(b => { if (!store.badges[b.k] && b.t()) { store.badges[b.k] = today(); got++; if (got <= 2) setTimeout(() => { toast(b.e, 'Новый значок: ' + b.n, b.d); sfx('chest'); }, 500 + got * 700); } });
+  store.fseen = store.fseen || { straw: 1 };
+  FRAMES.forEach(f => { if (!store.fseen[f.k] && frameOwned(f.k)) { store.fseen[f.k] = 1; got++; setTimeout(() => { toast('🖼️', 'Новая рамка: ' + f.name, 'Выбери её в профиле'); sfx('chest'); }, 900 + got * 700); } });
   if (got) { persist(); push(); }
 }
 
@@ -441,6 +443,11 @@ function checkBadges(){
 let installEv = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEv = e; });
 function isStandalone(){ return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone; }
+function avItems(t){
+  if (t === 'f') return FRAMES.map(f => { const ok = frameOwned(f.k), on = myFrame() === f.k; return `<button class="avit${on ? ' on' : ''}${ok ? '' : ' lock'}" data-av="f:${f.k}" ${ok ? '' : 'disabled'}>${AVATAR(96, f.k, myPose())}<b>${esc(f.name)}</b>${ok ? '' : `<small>🔒 ${esc(f.cond)} или в сундучке</small>`}</button>`; }).join('');
+  if (t === 'p') return POSES.map(p => { const ok = poseOwned(p.k), on = myPose() === p.k; return `<button class="avit${on ? ' on' : ''}${ok ? '' : ' lock'}" data-av="p:${p.k}" ${ok ? '' : 'disabled'}><span class="avpose"><img src="mascot/${p.k}.svg" alt=""></span><b>${esc(p.name)}</b>${ok ? '' : '<small>🔒 в сундучке</small>'}</button>`; }).join('');
+  return BGS.map(b => { const ok = bgOwned(b.k), on = (store.pathbg || '') === b.k; return `<button class="avit${on ? ' on' : ''}${ok ? '' : ' lock'}" data-av="b:${b.k}" ${ok ? '' : 'disabled'}><span class="rbg bgsw-${b.k || 'def'}"></span><b>${esc(b.name)}</b>${ok ? '' : '<small>🔒 в сундучке</small>'}</button>`; }).join('');
+}
 function renderMe(){
   document.body.classList.remove('duo-test');
   const st = stats(), xp = xpTotal(), bd = store.badges || {}, nb = BADGES.filter(b => bd[b.k]).length;
@@ -449,7 +456,7 @@ function renderMe(){
   app.innerHTML = `
   <div class="wrap page">
     <section class="card mehead">
-      <div class="mecat">${MASCOT('happy')}</div>
+      <div class="mecat">${AVATAR(180, myFrame(), myPose())}</div>
       <div><p class="label">${store.code ? esc(store.stream || '') + ' поток' : 'Мой профиль'}</p><h1 class="h1">${esc(store.name || 'Привет!')}</h1>
       <div class="mestats">
         <div><b>🔥 ${st.streak}</b><span>серия</span></div>
@@ -461,6 +468,13 @@ function renderMe(){
       </div>
       <p class="muted">Заморозка даётся за каждые 7 дней подряд (максимум 2) и иногда лежит в сундучке. Если пропустишь день, она сама спасёт серию.${store.spare ? ` Запасных сердечек: ${store.spare} ❤️` : ''}</p></div>
     </section>
+
+    ${boostOn() ? `<div class="card boostcard"><b>x2</b><div><h3>Двойной опыт включён</h3><p class="muted">Осталось <span class="boostleft">${boostLeft()}</span>. Весь опыт сейчас удваивается!</p></div></div>` : ''}
+    <div class="sec-title"><h2>Моя аватарка</h2><span class="script">рамки, позы и фоны</span></div>
+    <div class="card avpick">
+      <div class="stream avtabs" role="group">${[['f', 'Рамки'], ['p', 'Позы Дили'], ['b', 'Фон тропинки']].map(([k, t]) => `<button type="button" data-avt="${k}" aria-pressed="${(renderMe.tab || 'f') === k}">${t}</button>`).join('')}</div>
+      <div class="avgrid">${avItems(renderMe.tab || 'f')}</div>
+    </div>
 
     <div class="sec-title"><h2>Значки</h2><span class="script">${nb} из ${BADGES.length}</span></div>
     <div class="bdgs">${BADGES.map(b => `<div class="bdg${bd[b.k] ? ' on' : ''}"><span>${b.e}</span><b>${esc(b.n)}</b><small>${esc(b.d)}</small></div>`).join('')}</div>
@@ -488,6 +502,11 @@ function renderMe(){
           : `<p class="muted">Иконка с Дилей на главном экране, открывается как приложение.</p><button class="dbtn" id="inst">Установить</button>`}
       </div>
       <div class="card">
+        <h3>🎬 Заставка</h3>
+        <p class="muted">Полёт над кубическим миром показывается раз в день при входе.</p>
+        <a class="dbtn ghost" href="intro.html">Посмотреть ещё раз</a>
+      </div>
+      <div class="card">
         <h3>✈️ Офлайн</h3>
         <p class="muted">Скачай все конспекты и тесты, чтобы заниматься без интернета.</p>
         <button class="dbtn ghost" id="offl">Скачать все уроки</button>
@@ -496,6 +515,13 @@ function renderMe(){
     </div>
     ${store.code ? '<p style="text-align:center;margin:30px 0 0"><button class="btn btn-light" onclick="logout()">Выйти из кабинета</button></p>' : ''}
   </div>`;
+  app.querySelectorAll('[data-avt]').forEach(b => b.addEventListener('click', () => { renderMe.tab = b.dataset.avt; renderMe(); setTimeout(() => { const c = document.querySelector('.avpick'); c && c.scrollIntoView({ block: 'center' }); }, 30); }));
+  app.querySelectorAll('[data-av]').forEach(b => b.addEventListener('click', () => {
+    const [t, k] = b.dataset.av.split(':');
+    if (t === 'f') store.frame = k; if (t === 'p') store.pose = k; if (t === 'b') store.pathbg = k;
+    persist(); push(); sfx('tap'); renderMe();
+    setTimeout(() => { const c = document.querySelector('.avpick'); c && c.scrollIntoView({ block: 'center' }); }, 30);
+  }));
   app.querySelectorAll('.outfit').forEach(b => b.addEventListener('click', () => { store.outfit = b.dataset.k; persist(); push(); sfx('tap'); renderMe(); const h = document.getElementById('hopper'); h && h.remove(); }));
   document.getElementById('s_sound').addEventListener('change', e => { setOpt('sound', e.target.checked); sfx('right'); });
   document.getElementById('s_vib').addEventListener('change', e => { setOpt('vib', e.target.checked); sfx('right'); });
@@ -511,6 +537,11 @@ function renderMe(){
 /* =========================================================
    РОУТЕР И ЗАПУСК
    ========================================================= */
+function setPathBg(on){
+  BGS.forEach(b => b.k && document.body.classList.remove('bg-' + b.k));
+  document.body.classList.toggle('pathpage', !!on);
+  const k = store.pathbg; if (on && k && bgOwned(k)) document.body.classList.add('bg-' + k);
+}
 function setNav(h){
   const cur = h === 'review' ? 'review' : h === 'mock' ? 'mock' : h === 'games' ? 'games' : h === 'me' ? 'me' : h === 'map' ? 'map' : 'home';
   document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === cur));
@@ -521,7 +552,7 @@ function route(){
   const h = location.hash.replace(/^#\/?/, '').split('/');
   if (G && G.end && h[0] !== 'games') { clearInterval(G.t); G.end = 0; }
   if (h[0] !== 'mock') clearInterval(tickMock.t);
-  setNav(h[0]);
+  setNav(h[0]); setPathBg(false);
   if (CONFIG.api && !store.code) { document.body.classList.remove('duo-test'); renderLogin(); window.scrollTo(0, 0); return; }
   if (h[0] === 'lesson' && h[2] === 'test') { renderDuoTest(h[1]); window.scrollTo(0, 0); return; }
   document.body.classList.remove('duo-test');
@@ -531,7 +562,7 @@ function route(){
   else if (h[0] === 'map' || h[0] === 'schedule' || h[0] === 'points') { renderMap(); if (h[0] !== 'map') { const el = document.getElementById(h[0]); el && setTimeout(() => el.scrollIntoView(), 30); return; } }
   else if (h[0] === 'games') { if (h[1]) { startGame(h[1]); window.scrollTo(0, 0); return; } renderGames(); }
   else if (h[0] === 'me') renderMe();
-  else { renderHome(); return; }
+  else { setPathBg(true); renderHome(); return; }
   window.scrollTo(0, 0);
 }
 window.addEventListener('hashchange', route);

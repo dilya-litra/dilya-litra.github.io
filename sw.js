@@ -1,8 +1,10 @@
 /* dilya.litra: офлайн-режим. При обновлении сайта поменяй номер версии */
-const V = 'dilya-v2';
-const SHELL = ['./', 'index.html', 'css/base.css?v=2', 'css/app.css?v=2', 'js/data.js?v=2', 'js/app.js?v=2', 'js/extra.js?v=2',
+const V = 'dilya-v3';
+const SHELL = ['./', 'index.html', 'css/base.css?v=3', 'css/app.css?v=3', 'js/data.js?v=3', 'js/app.js?v=3', 'js/extra.js?v=3',
   'logo.jpg', 'dilya.jpg', 'manifest.webmanifest', 'icons/icon-192.png',
-  'mascot/idle.svg', 'mascot/wave.svg', 'mascot/happy.svg', 'mascot/sad.svg', 'mascot/sleep.svg'];
+  'intro.html', 'mascot/idle.svg', 'mascot/read.svg', 'mascot/sleepbook.svg', 'mascot/love.svg', 'mascot/wow.svg', 'mascot/think.svg', 'mascot/star.svg',
+  'img/frames/straw.svg', 'img/frames/honey.svg', 'img/frames/mint.svg', 'img/frames/garden.svg', 'img/frames/pixel.svg', 'img/frames/books.svg', 'img/frames/sweet.svg', 'img/frames/royal.svg',
+  'img/bg/night-tile.svg', 'img/bg/night-moon.svg', 'img/bg/sakura-tile.svg', 'img/bg/sakura-branch-l.svg', 'img/bg/sakura-branch-r.svg', 'img/bg/winter-tile.svg', 'img/bg/winter-hills.svg', 'mascot/wave.svg', 'mascot/happy.svg', 'mascot/sad.svg', 'mascot/sleep.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
