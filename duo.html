@@ -528,6 +528,14 @@ body{background-color:#FBF4EE;background-image:url("data:image/svg+xml,%3Csvg%20
 .mykind{margin-top:14px;padding:12px 14px;border-radius:14px;background:#FFF1F4;border:2px dashed #F2C6CC;text-align:left;font-size:14px}
 .mykind b{color:var(--burg)}
 
+.path{position:relative}
+.hopper{position:absolute;left:0;top:0;width:68px;z-index:30;cursor:pointer;pointer-events:auto;transition:none}
+.hopper img{width:68px;height:auto;filter:drop-shadow(0 6px 6px rgba(150,60,80,.25))}
+.hopsay{position:absolute;bottom:86%;left:50%;transform:translateX(-50%);white-space:nowrap;background:#fff;border:2px solid var(--line);border-radius:12px;padding:5px 10px;font-size:13px;font-weight:800;color:var(--burg)}
+.startbub{top:16px;left:84px;animation:none}
+.startbub:after{left:-7px;top:50%;margin:-6px 0 0;border:6px solid transparent;border-right-color:var(--line);border-left:0;bottom:auto}
+.nodewrap:has(.cur){margin-top:44px}
+
 </style>
 </head>
 <body>
@@ -17423,7 +17431,7 @@ function renderHome(){
         </div>
       </div>`;
     }).join('');
-    const mascot = n === cw ? `<div class="pathcat ${n % 2 ? 'r' : 'l'}">${MASCOT('wave')}</div>` : '';
+    const mascot = '';
     return `<section class="unit${n === cw ? ' curu' : ''}" id="w${n}" style="--c:${e.c}">
       <div class="ubanner"><div><p>${esc(e.name)} · неделя ${n}</p><h3>${esc(weekNames(w))}</h3></div><a href="#/w${n}" class="ubook" onclick="event.preventDefault();toggleWeek(${n})">☰</a></div>
       <div class="uweek" hidden>${w.map(x => { const L = x.id && byId(x.id); return `<a ${L ? `href="#/lesson/${L.id}"` : ''}>${x.num}. ${x.author ? '<b>' + esc(x.author) + '</b> ' : ''}${esc(x.title)}</a>`; }).join('')}</div>
@@ -17455,6 +17463,7 @@ function renderHome(){
     pop.hidden = open; if (!open) b.parentElement.classList.add('open');
   }));
   if (CONFIG.api && store.code) loadLeague();
+  setTimeout(placeHopper, 120);
   setTimeout(() => { const m = location.hash.match(/#\/w(\d+)/); const c = m ? document.getElementById('w' + m[1]) : (document.querySelector('.node.cur') || document.getElementById('w' + cw)); if (c) c.scrollIntoView({ block: m ? 'start' : 'center' }); const pp = c && c.closest && document.querySelector('.node.cur'); }, 50);
 }
 function catMood(){
@@ -17615,6 +17624,48 @@ function drawRefill(msg, ok){
     D.i++; D.ans = null; D.checked = false; D.picked = null; D.pairs = {}; D.shuf = null; drawDuo();
   });
 }
+
+/* ---------- ДИЛЯ ПРЫГАЕТ ПО КРУЖОЧКАМ ---------- */
+let hopBusy = false;
+function nodePos(n, path){
+  const r = n.getBoundingClientRect(), p = path.getBoundingClientRect();
+  return { x: r.left - p.left + r.width / 2, y: r.top - p.top };
+}
+function setHop(el, pt){ el.style.transform = `translate(${pt.x - 34}px, ${pt.y - 58}px)`; }
+function placeHopper(){
+  const path = document.querySelector('.path'); if (!path) return;
+  const nodes = [...path.querySelectorAll('.node[data-id]')].filter(n => n.dataset.id);
+  const cur = path.querySelector('.node.cur') || nodes[0]; if (!cur) return;
+  let el = document.getElementById('hopper');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'hopper'; el.className = 'hopper';
+    el.innerHTML = MASCOT('wave') + '<span class="hopsay" hidden></span>';
+    el.addEventListener('click', () => { if (hopBusy) return; el.animate([{ marginTop: '0px' }, { marginTop: '-26px' }, { marginTop: '0px' }], { duration: 420, easing: 'ease-out' });
+      const say = el.querySelector('.hopsay'); say.textContent = ['Вперёд! 💗', 'Ты умничка!', 'Ещё один урок?', 'Я в тебя верю ✨'][Math.floor(Math.random() * 4)]; say.hidden = false; clearTimeout(el._t); el._t = setTimeout(() => say.hidden = true, 1800); });
+    path.appendChild(el);
+  }
+  const ci = nodes.indexOf(cur), pi = nodes.findIndex(n => n.dataset.id === store.mascotAt);
+  const finish = () => { setHop(el, nodePos(cur, path)); el.querySelector('img').src = 'mascot/wave.svg'; hopBusy = false; store.mascotAt = cur.dataset.id; _save(); };
+  if (pi < 0 || pi >= ci || !el.animate) { finish(); return; }
+  // прыгаем: не больше 6 последних кружков
+  const start = Math.max(pi, ci - 6), steps = nodes.slice(start, ci + 1).map(n => nodePos(n, path));
+  hopBusy = true; setHop(el, steps[0]); el.querySelector('img').src = 'mascot/happy.svg';
+  nodes[start].scrollIntoView({ block: 'center' });
+  let k = 0;
+  const hop = () => {
+    if (k >= steps.length - 1) { finish(); el.animate([{ transform: el.style.transform + ' scale(1.15,.85)' }, { transform: el.style.transform }], { duration: 260, easing: 'ease-out' }); return; }
+    const a = steps[k], b = steps[k + 1], top = Math.min(a.y, b.y) - 70;
+    const T = (x, y, sx, sy) => `translate(${x - 34}px, ${y - 58}px) scale(${sx},${sy})`;
+    const anim = el.animate([
+      { transform: T(a.x, a.y, 1.12, .88) },
+      { transform: T((a.x + b.x) / 2, top, .92, 1.1), offset: .5 },
+      { transform: T(b.x, b.y, 1.1, .9) }
+    ], { duration: 520, easing: 'ease-in-out' });
+    setTimeout(() => { anim.cancel && anim.cancel(); setHop(el, b); k++; nodes[start + k].scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(hop, 90); }, 520);
+  };
+  setTimeout(hop, 500);
+}
+window.addEventListener('resize', () => { if (!hopBusy && document.getElementById('hopper')) { const path = document.querySelector('.path'), cur = path && path.querySelector('.node.cur'); cur && setHop(document.getElementById('hopper'), nodePos(cur, path)); } });
 
 function route(){
   const h = location.hash.replace(/^#\/?/, '').split('/');
