@@ -49,21 +49,23 @@ function cors(origin){
 }
 function json(obj, status, origin){ return new Response(JSON.stringify(obj), { status: status || 200, headers: Object.assign({ 'Content-Type': 'application/json; charset=utf-8' }, cors(origin)) }); }
 
-async function ask(env, contents, style){
+function thinkCfg(m){ return /lite/.test(m) ? null : /2\.5/.test(m) ? { thinkingBudget: 0 } : { thinkingLevel: 'minimal' }; }
+/* открывает потоковый ответ Gemini, перебирая модели, если какая-то занята */
+async function openStream(env, contents, style){
+  const sys = SYSTEM + (style ? '\n\nСТИЛЬ ОБЩЕНИЯ (от учительницы Дили):\n' + style : '');
   let last = '';
   for (const m of MODELS) {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_KEY },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM + (style ? '\n\nСТИЛЬ ОБЩЕНИЯ (от учительницы Дили):\n' + style : '') }] }, contents, generationConfig: { temperature: 0.9, maxOutputTokens: 2048 } })
-    });
-    if (r.status === 404 || r.status === 429 || r.status >= 500) { last = m + ' ' + r.status; continue; }
-    const d = await r.json();
-    if (!r.ok) throw new Error((d.error && d.error.message) || r.status);
-    const c = (d.candidates || [])[0];
-    const text = c && c.content && (c.content.parts || []).map(p => p.text || '').join('').trim();
-    if (text) return text;
-    if ((d.promptFeedback && d.promptFeedback.blockReason) || (c && c.finishReason === 'SAFETY')) return 'Давай поговорим о чём-нибудь другом 💗 Если тебе сейчас тяжело, расскажи, что случилось, я рядом.';
-    last = m + ' empty';
+    for (const think of [thinkCfg(m), null]) {
+      const gc = { temperature: 0.9, maxOutputTokens: 1500 }; if (think) gc.thinkingConfig = think;
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':streamGenerateContent?alt=sse', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_KEY },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents, generationConfig: gc })
+      });
+      if (r.ok) return r;
+      last = m + ' ' + r.status;
+      if (r.status === 400 && think) continue;   // модель не знает настройку «думать меньше», пробуем без неё
+      break;                                      // 404 / 429 / 5xx: следующая модель
+    }
   }
   throw new Error('busy ' + last);
 }
@@ -87,12 +89,36 @@ export default {
     const name = typeof body.name === 'string' ? body.name.slice(0, 40) : '';
     const pre = (name ? 'Ученицу зовут ' + name + '.\n' : '') + (ctx ? 'КОНСПЕКТ КУРСА (используй для ответа, если подходит к вопросу):\n' + ctx + '\n\n' : '');
     if (pre) msgs[msgs.length - 1].parts[0].text = pre + 'СООБЩЕНИЕ УЧЕНИЦЫ:\n' + lastText;
-    try {
-      let reply = (await ask(env, msgs, style)).replace(/\s—\s/g, ', ').replace(/—/g, '-');
-      if (CRISIS.test(lastText) && !/150/.test(reply)) reply += HELP;
-      return json({ reply }, 200, origin);
-    } catch (e) {
-      return json({ error: String(e.message || e).startsWith('busy') ? 'busy' : 'fail' }, 503, origin);
-    }
+    let up;
+    try { up = await openStream(env, msgs, style); }
+    catch (e) { return json({ error: 'busy' }, 503, origin); }
+    const enc = new TextEncoder(), dec = new TextDecoder();
+    const out = new ReadableStream({
+      async start(c){
+        const send = t => c.enqueue(enc.encode('data: ' + JSON.stringify({ t }) + '\n\n'));
+        let buf = '', all = '', blocked = false;
+        const reader = up.body.getReader();
+        try {
+          for (;;) {
+            const { value, done } = await reader.read(); if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let i;
+            while ((i = buf.indexOf('\n')) >= 0) {
+              const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+              if (!line.startsWith('data:')) continue;
+              let d; try { d = JSON.parse(line.slice(5)); } catch (e) { continue; }
+              const cand = (d.candidates || [])[0];
+              if ((d.promptFeedback && d.promptFeedback.blockReason) || (cand && cand.finishReason === 'SAFETY')) blocked = true;
+              const t = cand && cand.content ? (cand.content.parts || []).filter(p => !p.thought).map(p => p.text || '').join('') : '';
+              if (t) { const clean = t.replace(/\s—\s/g, ', ').replace(/—/g, '-'); all += clean; send(clean); }
+            }
+          }
+        } catch (e) {}
+        if (!all.trim()) send(blocked ? 'Давай поговорим о чём-нибудь другом. Если тебе сейчас тяжело, расскажи, что случилось, я рядом.' : 'Ой, я задумалась и потеряла мысль. Спроси ещё раз?');
+        if (CRISIS.test(lastText) && !/150/.test(all)) send(HELP);
+        c.enqueue(enc.encode('data: [DONE]\n\n')); c.close();
+      }
+    });
+    return new Response(out, { headers: Object.assign({ 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache' }, cors(origin)) });
   }
 };

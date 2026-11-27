@@ -61,17 +61,20 @@ function chPick(text){
   return ids.filter(id => score[id] >= score[ids[0]] * 0.7).slice(0, 2);
 }
 function flatText(x){ if (x == null) return ''; if (typeof x === 'string') return x; if (Array.isArray(x)) return x.map(flatText).filter(Boolean).join(x.every(v => typeof v === 'string') ? ' · ' : '\n'); if (typeof x === 'object') return Object.keys(x).map(k => flatText(x[k])).filter(Boolean).join('\n'); return String(x); }
-function lessonText(L){
-  const head = '### ' + (L.author ? L.author + ' ' : '') + '«' + L.title + '»';
-  const facts = (L.facts || []).map(f => f.join(': ')).join('\n');
-  const body = (L.blocks || []).map(b => '## ' + b.h + '\n' + flatText(b.items)).join('\n\n');
-  return (head + '\n' + facts + '\n\n' + body).slice(0, 14000);
+function lessonText(L, q){
+  const head = '### ' + (L.author ? L.author + ' ' : '') + '«' + L.title + '»\n' + (L.facts || []).map(f => f.join(': ')).join('\n');
+  const words = norm(q).split(/[^а-яa-z0-9]+/).filter(w => w.length > 3).map(stem);
+  const blocks = (L.blocks || []).map((b, i) => { const t = '## ' + b.h + '\n' + flatText(b.items), lt = norm(t); return { i, t, sc: words.reduce((s, w) => s + (lt.includes(w) ? 1 : 0), 0) + (norm(b.h).match(/пересказ|герои|персонаж|тема|идея/) ? 0.5 : 0) }; });
+  const pick = blocks.slice().sort((a, b) => b.sc - a.sc || a.i - b.i);
+  let out = [], len = head.length;
+  for (const b of pick) { const t = b.t.slice(0, 3500); if (len + t.length > 7000) continue; out.push(b); len += t.length; }
+  return head + '\n\n' + out.sort((a, b) => a.i - b.i).map(b => b.t.slice(0, 3500)).join('\n\n');
 }
 function chContext(text){
   return chHeroes().then(() => {
-    let ids = chPick(text); if (!ids.length) ids = CH.ctx || [];
+    let ids = chPick(text); if (!ids.length) ids = (CH.ctx || []).slice(0, 1);
     CH.ctx = ids;
-    return Promise.all(ids.map(id => loadLesson(id).then(lessonText).catch(() => ''))).then(a => a.filter(Boolean).join('\n\n'));
+    return Promise.all(ids.map(id => loadLesson(id).then(L => lessonText(L, text)).catch(() => ''))).then(a => a.filter(Boolean).join('\n\n'));
   });
 }
 
@@ -131,11 +134,27 @@ function chSend(text){
   };
   if (!CHAT_URL) { setTimeout(() => done('Я пока учусь и совсем скоро заработаю 🌸 Загляни чуть позже!', false), 700); return; }
   chContext(text).then(ctx => fetch(CHAT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ msgs: CH.msgs.slice(-16), ctx, style: CHAT_STYLE, name: typeof firstName === 'function' ? firstName() : '' }) }))
-    .then(r => r.json().then(d => ({ ok: r.ok, d })))
-    .then(({ ok, d }) => {
-      if (ok && d.reply) return done(d.reply, true);
-      done(d.error === 'slow' ? 'Ты пишешь быстрее, чем я думаю 😅 Подожди минутку и спроси ещё раз' : 'У меня сейчас очень много вопросов, я чуть-чуть запуталась 🙈 Попробуй через пару минут', false);
+    body: JSON.stringify({ msgs: CH.msgs.slice(-12), ctx, style: CHAT_STYLE, name: typeof firstName === 'function' ? firstName() : '' }) }))
+    .then(r => {
+      if (!r.ok || !/event-stream/.test(r.headers.get('content-type') || '') || !r.body) {
+        return r.json().catch(() => ({})).then(d => done(d.reply ? d.reply : d.error === 'slow' ? 'Ты пишешь быстрее, чем я думаю 😅 Подожди минутку и спроси ещё раз' : 'У меня сейчас очень много вопросов, я чуть-чуть запуталась. Попробуй через пару минут', !!d.reply));
+      }
+      const reader = r.body.getReader(), dec = new TextDecoder(); let buf = '', all = '', bubble = null;
+      const paint = () => { if (!bubble) { typing && typing.remove(); bubble = chAdd('a', ''); } bubble.querySelector('.cb').innerHTML = fmtMsg(all); const log = document.getElementById('chlog'); log && (log.scrollTop = log.scrollHeight); };
+      const pump = () => reader.read().then(({ value, done: end }) => {
+        if (value) {
+          buf += dec.decode(value, { stream: true }); let i;
+          while ((i = buf.indexOf('\n\n')) >= 0) {
+            const line = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
+            if (!line.startsWith('data:')) continue; const p = line.slice(5).trim(); if (p === '[DONE]') continue;
+            try { all += JSON.parse(p).t || ''; paint(); } catch (e) {}
+          }
+        }
+        if (!end) return pump();
+        chBusy = false; typing && typing.remove();
+        if (all.trim()) { CH.msgs.push({ r: 'a', t: all }); chSave(); sfx('tap'); } else done('Ой, я потеряла мысль. Спроси ещё раз?', false);
+      });
+      return pump();
     })
     .catch(() => done('Не получается связаться 😔 Проверь интернет и попробуй ещё раз', false));
 }
