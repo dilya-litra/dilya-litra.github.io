@@ -1,6 +1,6 @@
 /* dilya.litra: офлайн-режим. При обновлении сайта поменяй номер версии */
-const V = 'dilya-v9';
-const SHELL = ['./', 'index.html', 'css/base.css?v=9', 'css/app.css?v=9', 'js/data.js?v=9', 'js/app.js?v=9', 'js/extra.js?v=9', 'js/plan.js?v=9', 'js/chat.js?v=9', 'css/plan.css?v=9',
+const V = 'dilya-v10';
+const SHELL = ['./', 'index.html', 'css/base.css?v=10', 'css/app.css?v=10', 'js/data.js?v=10', 'js/app.js?v=10', 'js/extra.js?v=10', 'js/plan.js?v=10', 'js/chat.js?v=10', 'css/plan.css?v=10',
   'logo.jpg', 'dilya.jpg', 'manifest.webmanifest', 'icons/icon-192.png',
   'intro.html', 'mascot/idle.svg', 'mascot/read.svg', 'mascot/sleepbook.svg', 'mascot/love.svg', 'mascot/wow.svg', 'mascot/think.svg', 'mascot/star.svg',
   'img/frames/straw.svg', 'img/frames/honey.svg', 'img/frames/mint.svg', 'img/frames/garden.svg', 'img/frames/pixel.svg', 'img/frames/books.svg', 'img/frames/sweet.svg', 'img/frames/royal.svg',
