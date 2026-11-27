@@ -290,10 +290,7 @@ function pointsHtml(){
    МИНИ-ИГРЫ
    ========================================================= */
 const GAMES = {
-  hero: { name: 'Угадай героя', e: '🕵️‍♀️', d: 'Читаешь описание, угадываешь, кто это' },
-  whose: { name: 'Чей герой?', e: '📚', d: 'Из какого произведения этот персонаж' },
-  author: { name: 'Кто автор?', e: '✒️', d: 'Произведение и его автор' },
-  blitz: { name: 'Молния', e: '⚡', d: 'Вопросы из ЕНТ-тестов на скорость' }
+  race: { name: 'Лесная дорога', e: '🚗', d: 'Едешь по лесу, собираешь XP и героев нужного произведения', run: () => RACE.start() }
 };
 const GAME_SEC = 60, GAME_XP_DAY = 60;
 let HEROES = null, G = null;
@@ -306,9 +303,9 @@ function renderGames(){
     <section class="card pagehead">
       ${MASCOT('happy')}
       <div><p class="label">Минутка между уроками</p><h1 class="h1">Мини-игры</h1>
-      <p class="lead">Каждая игра длится ${GAME_SEC} секунд. За каждый верный ответ +1 XP (до ${GAME_XP_DAY} XP в день). Побей свой рекорд!</p></div>
+      <p class="lead">Играй, собирай XP (до ${GAME_XP_DAY} XP в день) и бей свой рекорд!</p></div>
     </section>
-    <div class="games">${Object.entries(GAMES).map(([k, g]) => `<a class="card game" href="#/games/${k}"><span class="ge">${g.e}</span><h3>${esc(g.name)}</h3><p>${esc(g.d)}</p><em>${best[k] ? 'рекорд ' + best[k] : 'ещё не играла'}</em></a>`).join('')}</div>
+    <div class="games">${Object.entries(GAMES).map(([k, g]) => `<a class="card game" href="#/games/${k}"><span class="ge">${g.e}</span><h3>${esc(g.name)}</h3><p>${esc(g.d)}</p><em>${best[k] ? 'рекорд ⭐ ' + best[k] : 'ещё не играла'}</em></a>`).join('')}</div>
   </div>`;
 }
 function maskName(name, text){
@@ -340,6 +337,7 @@ function blitzQ(){
 }
 function startGame(k){
   if (!GAMES[k]) { location.hash = '#/games'; return; }
+  if (GAMES[k].run) { GAMES[k].run(); return; }
   const prep = k === 'hero' || k === 'whose' ? loadHeroes() : k === 'blitz' ? (() => {
     const done = READY_ORDER.filter(x => lessonStarted(x.id)).map(x => x.id);
     const ids = mix(done.length >= 3 ? done : READY_ORDER.filter(x => x.week <= curWeek()).map(x => x.id)).slice(0, 8);
@@ -599,6 +597,7 @@ function setNav(h){
 function route(){
   const h = location.hash.replace(/^#\/?/, '').split('/');
   if (G && G.end && h[0] !== 'games') { clearInterval(G.t); G.end = 0; }
+  if (window.RACE && RACE.on && !(h[0] === 'games' && h[1] === 'race')) RACE.stop();
   if (h[0] !== 'mock') clearInterval(tickMock.t);
   setNav(h[0]); setPathBg(false);
   if (CONFIG.api && !store.code) { document.body.classList.remove('duo-test'); renderLogin(); window.scrollTo(0, 0); return; }
