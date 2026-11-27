@@ -8,8 +8,6 @@ const CONFIG = {
   // ссылка на веб-приложение Apps Script (личные кабинеты). Пока пусто: сайт работает без входа
   api: '',
   bot: 'dilya_litra_bot',
-  // Client ID из Google Cloud (планер сам пишет дела в Google Календарь ученицы). Пусто: работает кнопка-ссылка
-  gcal: '',
   streams: {
     '2': { monday: '2026-11-30', week: 9, before: 7 },
     '3': { monday: '2026-11-30', week: 5, before: 4 }

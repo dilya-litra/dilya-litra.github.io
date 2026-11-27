@@ -1,9 +1,8 @@
 /* =========================================================
    dilya.litra: планер дня + таймер фокуса
    Дела хранятся в store.plan, минуты фокуса в store.focus.
-   Уведомления: каждое дело можно одной кнопкой отправить
-   в свой Google Календарь (или весь день в календарь телефона),
-   и календарь сам пришлёт напоминание.
+   Напоминания: всплывашка и звук на сайте, а по желанию
+   весь день можно скинуть в календарь телефона.
    ========================================================= */
 'use strict';
 
@@ -28,19 +27,10 @@ function focusToday(){ return (store.focus || {})[today()] || 0; }
 function focusWeek(){ const f = store.focus || {}, d = new Date(), day = (d.getDay() + 6) % 7; let s = 0; for (let i = 0; i <= day; i++) s += f[dkey(new Date(Date.now() - i * 864e5))] || 0; return s; }
 function prettyDay(dk){ const d = parseKey(dk), diff = dayDiff(today(), dk); const w = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'][d.getDay()]; return (diff === 0 ? 'Сегодня' : diff === 1 ? 'Завтра' : diff === -1 ? 'Вчера' : w[0].toUpperCase() + w.slice(1)) + ', ' + d.getDate() + ' ' + MON[d.getMonth()]; }
 
-/* ---------- календари ---------- */
+/* ---------- календарь телефона (файл .ics) ---------- */
 function pad2(n){ return String(n).padStart(2, '0'); }
-function gStamp(d){ return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + pad2(d.getMinutes()) + '00'; }
 function uStamp(d){ return d.getUTCFullYear() + pad2(d.getUTCMonth() + 1) + pad2(d.getUTCDate()) + 'T' + pad2(d.getUTCHours()) + pad2(d.getUTCMinutes()) + '00Z'; }
 function blockDetails(b){ return (b.subs && b.subs.length ? b.subs.map(s => '• ' + s.t).join('\n') + '\n\n' : '') + 'Мой планер dilya.litra: ' + location.origin + location.pathname + '#/plan'; }
-function gcalUrl(dk, b){
-  let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
-  return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
-    + '&text=' + encodeURIComponent(b.t)
-    + '&dates=' + gStamp(dateAt(dk, b.s)) + '/' + gStamp(endAt(dk, b))
-    + (tz ? '&ctz=' + encodeURIComponent(tz) : '')
-    + '&details=' + encodeURIComponent(blockDetails(b));
-}
 function icsEsc(s){ return String(s).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1'); }
 function icsFor(dk, list){
   const now = uStamp(new Date());
@@ -60,76 +50,6 @@ function exportDay(dk){
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
   toast('📲', 'Открой файл', 'Телефон предложит добавить дела в календарь. Напоминание придёт за 10 минут');
-}
-
-/* ---------- Google Календарь прямо с сайта ----------
-   Ученица один раз нажимает «Подключить», входит в свой Google,
-   и дальше каждое новое или изменённое дело само попадает
-   в её календарь с напоминанием за 10 минут. */
-const GCAL = (typeof CONFIG !== 'undefined' && CONFIG.gcal) || '';
-const GAPI = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
-const GTK = 'dilyaGTok';
-const GCOLOR = { burg: '11', rose: '4', peach: '6', sage: '2', lav: '3', sky: '7' };
-let TC = null;
-function gOn(){ return !!(GCAL && opt('gcalOn')); }
-function gisLoad(){
-  if (!GCAL) return Promise.reject(new Error('нет client id'));
-  if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
-  if (gisLoad.p) return gisLoad.p;
-  return gisLoad.p = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = res; sc.onerror = () => { gisLoad.p = null; rej(new Error('gis')); }; document.head.appendChild(sc); });
-}
-function tokGet(){ try { const t = JSON.parse(localStorage.getItem(GTK)); return t && t.exp > Date.now() + 60000 ? t.t : ''; } catch (e) { return ''; } }
-function tokSet(t, sec){ try { localStorage.setItem(GTK, JSON.stringify({ t, exp: Date.now() + (sec || 3600) * 1000 })); } catch (e) {} }
-function tokClear(){ try { localStorage.removeItem(GTK); } catch (e) {} }
-/* вызывать прямо из нажатия: Google открывает окошко входа только по тапу */
-function withToken(fn, first){
-  const tk = tokGet(); if (tk) return fn(tk);
-  if (!(window.google && google.accounts && google.accounts.oauth2)) { gisLoad().catch(() => {}); toast('📅', 'Секунду…', 'Подключаю Google, нажми ещё раз'); return; }
-  TC = TC || google.accounts.oauth2.initTokenClient({ client_id: GCAL, scope: 'https://www.googleapis.com/auth/calendar.events', callback: () => {} });
-  TC.callback = r => {
-    if (!r || r.error || !r.access_token) { toast('📅', 'Не получилось подключить', 'Попробуй ещё раз и разреши доступ к календарю'); return; }
-    if (!google.accounts.oauth2.hasGrantedAllScopes(r, 'https://www.googleapis.com/auth/calendar.events')) { toast('📅', 'Нужна галочка', 'Поставь галочку «Календарь», иначе дела не сохранятся'); return; }
-    tokSet(r.access_token, r.expires_in); fn(r.access_token);
-  };
-  TC.error_callback = () => toast('📅', 'Окошко Google закрылось', 'Нажми ещё раз, когда будешь готова');
-  TC.requestAccessToken({ prompt: first ? 'consent' : '' });
-}
-function isoLocal(d){ const o = -d.getTimezoneOffset(), sg = o >= 0 ? '+' : '-', a = Math.abs(o); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':00' + sg + pad2(Math.floor(a / 60)) + ':' + pad2(a % 60); }
-function gReq(tk, url, method, body){
-  return fetch(url, { method, headers: { Authorization: 'Bearer ' + tk, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
-    .then(r => { if (r.status === 401) { tokClear(); throw new Error('auth'); } return r; });
-}
-function gPush(dk, b, tk){
-  let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
-  const body = { summary: b.t, description: blockDetails(b), colorId: GCOLOR[b.c] || '11',
-    start: Object.assign({ dateTime: isoLocal(dateAt(dk, b.s)) }, tz ? { timeZone: tz } : {}),
-    end: Object.assign({ dateTime: isoLocal(endAt(dk, b)) }, tz ? { timeZone: tz } : {}),
-    reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 10 }] } };
-  return gReq(tk, b.gid ? GAPI + '/' + encodeURIComponent(b.gid) : GAPI, b.gid ? 'PATCH' : 'POST', body).then(r => {
-    if ((r.status === 404 || r.status === 410) && b.gid) { delete b.gid; return gPush(dk, b, tk); }
-    if (!r.ok) throw new Error(r.status); return r.json();
-  }).then(j => { if (j && j.id) { b.gid = j.id; planSave(); } });
-}
-function gDel(b, tk){ return b.gid ? gReq(tk, GAPI + '/' + encodeURIComponent(b.gid), 'DELETE').catch(() => {}) : Promise.resolve(); }
-function gSyncOne(dk, b, quiet){
-  withToken(tk => gPush(dk, b, tk).then(() => { if (!quiet) toast('📅', 'В календаре!', b.t + ', напомню за 10 минут'); if (location.hash.indexOf('#/plan') === 0) renderPlan(PDAY); })
-    .catch(e => toast('📅', e.message === 'auth' ? 'Google попросил войти снова' : 'Календарь не ответил', e.message === 'auth' ? 'Нажми 📅 на деле ещё раз' : 'Проверь интернет и нажми 📅 на деле')));
-}
-function gConnect(){
-  withToken(tk => {
-    setOpt('gcalOn', true);
-    const list = dayPlan(PDAY).filter(b => !b.gid);
-    Promise.all(list.map(b => gPush(PDAY, b, tk).catch(() => {}))).then(() => {
-      toast('🎉', 'Google Календарь подключён!', list.length ? 'Дела этого дня уже там. Новые будут попадать сами' : 'Теперь каждое дело само попадёт в календарь');
-      sfx('done'); renderPlan(PDAY);
-    });
-  }, true);
-}
-function gDisconnect(){
-  if (!confirm('Отключить Google Календарь? Дела, которые уже там, останутся.')) return;
-  const tk = tokGet(); tokClear(); setOpt('gcalOn', false);
-  try { tk && google.accounts.oauth2.revoke(tk, () => {}); } catch (e) {}
-  renderPlan(PDAY);
 }
 
 /* ---------- уведомления на сайте ---------- */
@@ -182,8 +102,6 @@ function renderPlan(dk){
         <button class="paddsub" data-addsub>+ подзадача</button>
         <div class="pacts">
           <button class="pico" data-edit aria-label="Изменить">✏️</button>
-          ${GCAL ? `<button class="pico pg${b.gid ? ' synced' : ''}" data-gs title="Google Календарь">📅 <span>${b.gid ? 'в календаре ✓' : 'в календарь'}</span></button>`
-            : `<a class="pico pg" href="${esc(gcalUrl(PDAY, b))}" target="_blank" rel="noopener" title="Добавить в Google Календарь">📅 <span>Google</span></a>`}
           <button class="pfocus" data-focus="${left}">▶ Фокус · ${fmtDur(left)}</button>
         </div>
       </div></div>`;
@@ -212,11 +130,8 @@ function renderPlan(dk){
       <div><b>⚡ ${(store.fxp || {})[today()] || 0}/${FOCUS_XP_DAY}</b><span>XP за фокус</span></div>
     </div>
 
-    ${GCAL ? (gOn() ? `<div class="card pgcal on"><span>📅</span><div><b>Google Календарь подключён</b><p class="muted">Дела сами попадают в твой календарь, напоминание за 10 минут</p></div><button class="pgx" data-gdis>Отключить</button></div>`
-      : `<div class="card pgcal"><span>📅</span><div><b>Напоминания на телефон</b><p class="muted">Подключи свой Google Календарь один раз, и все дела будут сами туда попадать. С сайта уходить не нужно</p></div><button class="dbtn" data-gcon>Подключить</button></div>`) : ''}
-
     ${store.planHelp ? '' : `<div class="card phelp"><button class="px" data-hidehelp aria-label="Скрыть">×</button><h3>Как это работает</h3>
-      <p class="muted">1. Запиши дело: что, со скольки и до скольки, и подзадачи.<br>2. ${GCAL ? 'Подключи Google Календарь, и каждое дело само сохранится там.' : 'Нажми <b>📅 Google</b>, и дело сохранится в твоём Google Календаре.'} Календарь сам пришлёт уведомление, даже если сайт закрыт.<br>3. Когда пора, жми <b>▶ Фокус</b>. За каждые 5 минут фокуса +1 XP (до ${FOCUS_XP_DAY} в день).</p></div>`}
+      <p class="muted">1. Запиши дело: что, со скольки и до скольки, и подзадачи.<br>2. Когда начинается дело, сайт напомнит звуком и всплывашкой.<br>3. Когда пора, жми <b>▶ Фокус</b>. За каждые 5 минут фокуса +1 XP (до ${FOCUS_XP_DAY} в день).</p></div>`}
 
     <div class="ptpl">
       <button class="dbtn" data-new>+ Новое дело</button>
@@ -227,7 +142,7 @@ function renderPlan(dk){
 
     <div class="ptl">${rows || `<div class="pempty">${MASCOT('sleep')}<p>На этот день пока ничего нет</p></div>`}</div>
 
-    ${list.length ? `<div class="card pexport"><div><h3>📲 Весь день в календарь телефона</h3><p class="muted">Скачается файл со всеми делами, напоминание за 10 минут до каждого. На iPhone откроется Календарь, на Android Google Календарь.</p></div><button class="dbtn ghost" data-ics>Добавить</button></div>` : ''}
+    ${list.length ? `<div class="card pexport"><div><h3>📲 Весь день в календарь телефона</h3><p class="muted">Скачается файл со всеми делами, напоминание за 10 минут до каждого. Пригодится, если хочешь напоминания, даже когда сайт закрыт.</p></div><button class="dbtn ghost" data-ics>Добавить</button></div>` : ''}
 
     <div class="sec-title"><h2>Быстрый фокус</h2><span class="script">без плана</span></div>
     <div class="pquick">${[25, 45, 60, 90].map(m => `<button data-q="${m}"><b>${m}</b><span>минут</span></button>`).join('')}</div>
@@ -244,9 +159,6 @@ function renderPlan(dk){
   app.querySelectorAll('[data-gap]').forEach(b => b.addEventListener('click', () => { const [s, e] = b.dataset.gap.split('|'); editBlock(null, { s, e }); }));
   app.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => startFocus('Фокус ' + b.dataset.q + ' минут', +b.dataset.q, '', '')));
   const hh = app.querySelector('[data-hidehelp]'); hh && hh.addEventListener('click', () => { store.planHelp = 1; persist(); renderPlan(); });
-  const gc = app.querySelector('[data-gcon]'); gc && gc.addEventListener('click', gConnect);
-  const gd = app.querySelector('[data-gdis]'); gd && gd.addEventListener('click', gDisconnect);
-  if (GCAL) gisLoad().catch(() => {});
   const ics = app.querySelector('[data-ics]'); ics && ics.addEventListener('click', () => exportDay(PDAY));
 
   app.querySelectorAll('.pblock').forEach(el => {
@@ -258,7 +170,6 @@ function renderPlan(dk){
     }));
     const dn = el.querySelector('[data-done]'); dn && dn.addEventListener('click', () => { b.done = b.done ? 0 : 1; if (b.done) { sfx('done'); toast('🎉', 'Дело сделано!', b.t); } planSave(); renderPlan(); });
     el.querySelector('[data-edit]').addEventListener('click', () => editBlock(b));
-    const gs = el.querySelector('[data-gs]'); gs && gs.addEventListener('click', () => gOn() ? gSyncOne(PDAY, b) : gConnect());
     el.querySelector('[data-focus]').addEventListener('click', e => startFocus(b.t, +e.currentTarget.dataset.focus, b.id, PDAY));
     const add = el.querySelector('[data-addsub]');
     add.addEventListener('click', () => {
@@ -278,8 +189,6 @@ function editBlock(b, pre){
   const s0 = pre.s || fromMin(Math.ceil((now.getHours() * 60 + now.getMinutes() + 5) / 30) * 30);
   const e0 = pre.e || fromMin(toMin(s0) + (pre.len || 60));
   b = b || { id: Date.now().toString(36), t: pre.t || '', s: s0, e: e0, c: pre.c || 'burg', subs: (pre.subs || []).map(t => ({ t, d: 0 })) };
-  const gChk = GCAL ? (gOn() || opt('gcal') !== false) : opt('gcal') !== false;
-  const gTxt = GCAL ? (gOn() ? '📅 Сохранить в мой Google Календарь (напомнит за 10 минут)' : '📅 Подключить мой Google Календарь и сохранить туда, чтобы пришло уведомление') : '📅 Сразу добавить в мой Google Календарь, чтобы пришло уведомление';
   const ov = document.createElement('div'); ov.className = 'overlay';
   ov.innerHTML = `<form class="pedit">
     <h2>${isNew ? 'Новое дело' : 'Изменить дело'}</h2>
@@ -287,7 +196,6 @@ function editBlock(b, pre){
     <div class="pe2"><label>Начало<input type="time" id="pe_s" value="${b.s}" required></label><label>Конец<input type="time" id="pe_e" value="${b.e}" required></label></div>
     <label>Подзадачи <small>каждая с новой строки</small><textarea id="pe_sub" rows="3" placeholder="Лаб 7&#10;Лаб 8&#10;Лаб 9">${esc((b.subs || []).map(x => x.t).join('\n'))}</textarea></label>
     <div class="pecol">${PCOLORS.map(([k, c]) => `<button type="button" data-c="${k}" style="--c:${c}" aria-pressed="${b.c === k}" aria-label="Цвет"></button>`).join('')}</div>
-    <label class="pegc"><input type="checkbox" id="pe_g" ${gChk ? 'checked' : ''}><span>${gTxt}</span></label>
     <div class="pebtns">${isNew ? '' : '<button type="button" class="pdel" id="pe_del">Удалить</button>'}<button type="button" class="dbtn ghost" id="pe_x">Отмена</button><button class="dbtn">Сохранить</button></div>
   </form>`;
   document.body.appendChild(ov);
@@ -297,7 +205,7 @@ function editBlock(b, pre){
   ov.addEventListener('click', e => { if (e.target === ov) close(); });
   ov.querySelector('#pe_x').addEventListener('click', close);
   const del = ov.querySelector('#pe_del');
-  del && del.addEventListener('click', () => { if (!confirm('Удалить «' + b.t + '»?')) return; const l = dayPlan(PDAY); l.splice(l.indexOf(b), 1); if (b.gid && gOn()) { const tk = tokGet(); if (tk) gDel(b, tk); else withToken(t => gDel(b, t)); } planSave(); close(); renderPlan(); });
+  del && del.addEventListener('click', () => { if (!confirm('Удалить «' + b.t + '»?')) return; const l = dayPlan(PDAY); l.splice(l.indexOf(b), 1); planSave(); close(); renderPlan(); });
   if (isNew) setTimeout(() => { const t = ov.querySelector('#pe_t'); if (!t.value) t.focus(); }, 60);
   ov.querySelector('form').addEventListener('submit', ev => {
     ev.preventDefault();
@@ -308,10 +216,7 @@ function editBlock(b, pre){
     const subs = ov.querySelector('#pe_sub').value.split('\n').map(x => x.trim()).filter(Boolean).map(x => ({ t: x, d: (old.find(o => o.t === x) || {}).d || 0 }));
     Object.assign(b, { t, s, e, c: col, subs });
     if (isNew) dayPlan(PDAY).push(b);
-    const g = ov.querySelector('#pe_g').checked; setOpt('gcal', g);
     planSave(); close(); sfx('right'); askNotify();
-    if (g && GCAL) { if (gOn()) gSyncOne(PDAY, b); else gConnect(); }
-    else if (g) window.open(gcalUrl(PDAY, b), '_blank', 'noopener');
     renderPlan();
   });
 }
