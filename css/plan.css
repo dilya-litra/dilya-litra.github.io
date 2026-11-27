@@ -123,9 +123,21 @@ body.duo-test .fmini{display:none}
   .phead{padding:18px}.phead .pcat{width:66px}
   .pweek{gap:4px}.parr{display:none}.pday{padding:8px 0 11px;border-radius:13px}.pday b{font-size:17px}
   .prow{grid-template-columns:44px 1fr;gap:8px}.ptime{font-size:13px}
-  .pblock{padding:14px}.pico.pg span{display:none}
+  .pblock{padding:14px}
   .pexport{flex-direction:column;align-items:stretch}
   .pquick b{font-size:22px}
   .fctl{gap:16px}
 }
 @media (max-height:700px){.fpill{margin-top:12px}.fcirc{width:min(270px,70vw)}.fctl{margin-top:18px}}
+
+/* Google Календарь */
+.pgcal{display:flex;gap:14px;align-items:center;margin-top:14px;padding:16px 18px}
+.pgcal > span{font-size:30px}
+.pgcal > div{flex:1;min-width:0}
+.pgcal b{font-size:16px;color:var(--ink)}
+.pgcal .muted{margin-top:2px}
+.pgcal .dbtn{padding:12px 18px;font-size:14px}
+.pgcal.on{border-color:#BFD9BE;background:color-mix(in srgb,var(--okbg) 60%,var(--cream))}
+.pgx{border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;text-decoration:underline}
+.pico.synced{border-color:#BFD9BE;color:var(--ok)}
+@media (max-width:600px){.pgcal{flex-wrap:wrap}.pgcal .dbtn{width:100%}.pico.pg span{display:inline;font-size:13px}}
