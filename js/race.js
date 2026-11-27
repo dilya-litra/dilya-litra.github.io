@@ -1,7 +1,7 @@
 /* =========================================================
    dilya.litra: игра «Лесная дорога»
-   Машина едет по лесу, собирает XP и героев нужного произведения.
-   Чужих героев нужно объезжать.
+   Машина спокойно едет по лесу и останавливается у развилок.
+   На указателе вопрос, ученица выбирает табличку, и машина сворачивает туда.
    ========================================================= */
 (function(){
 'use strict';
@@ -13,8 +13,8 @@ const CAM_H = 1000;           // высота камеры
 const FOV = 100;
 const DEPTH = 1 / Math.tan((FOV / 2) * Math.PI / 180);
 const LANES = [-0.66, 0, 0.66];
-const NEED = 5;               // сколько героев собрать за одно произведение
-const START_SPEED = 3800, SPEED_STEP = 450, MAX_SPEED = 7800;
+const FORKS = 10;             // развилок за одну поездку
+const CRUISE = 2800, MAX_SPEED = 4000, DECEL = 1400, GAP = 17000;
 const HEARTS = 3;
 
 let cv, ctx, W = 0, H = 0, DPR = 1, K = 1, HOR = 0, ROAD_W = 500;
@@ -245,6 +245,30 @@ function makeLantern(){
   return c.canvas;
 }
 
+function makeSignpost(){
+  const w = 300, h = 520, c = mk(w, h).getContext('2d'), cx = w / 2;
+  groundShadow(c, cx, h - 12, 70, 12);
+  const pg = c.createLinearGradient(cx - 12, 0, cx + 12, 0); pg.addColorStop(0, '#5a3a22'); pg.addColorStop(.5, '#9a6a42'); pg.addColorStop(1, '#4a2e1a');
+  c.fillStyle = pg; c.fillRect(cx - 11, 60, 22, h - 72);
+  const board = (y, dir, tilt) => {
+    c.save(); c.translate(cx, y); c.rotate(tilt);
+    const bw = 220, bh = 54, x0 = dir < 0 ? -bw + 40 : -40;
+    const g = c.createLinearGradient(0, -bh / 2, 0, bh / 2); g.addColorStop(0, '#c9935c'); g.addColorStop(1, '#8e5c33');
+    c.fillStyle = g; c.beginPath();
+    if (dir < 0) { c.moveTo(x0, 0); c.lineTo(x0 + 30, -bh / 2); c.lineTo(x0 + bw, -bh / 2); c.lineTo(x0 + bw, bh / 2); c.lineTo(x0 + 30, bh / 2); }
+    else if (dir > 0) { c.moveTo(x0, -bh / 2); c.lineTo(x0 + bw - 30, -bh / 2); c.lineTo(x0 + bw, 0); c.lineTo(x0 + bw - 30, bh / 2); c.lineTo(x0, bh / 2); }
+    else { c.moveTo(-bw / 2, -bh / 2); c.lineTo(bw / 2, -bh / 2); c.lineTo(bw / 2, bh / 2); c.lineTo(-bw / 2, bh / 2); }
+    c.closePath(); c.fill(); c.strokeStyle = '#5e3a1f'; c.lineWidth = 4; c.stroke();
+    c.strokeStyle = 'rgba(90,55,25,.35)'; c.lineWidth = 2; for (let i = -1; i <= 1; i++) { c.beginPath(); c.moveTo(dir < 0 ? x0 + 34 : (dir > 0 ? x0 + 6 : -bw / 2 + 6), i * 13); c.lineTo(dir > 0 ? x0 + bw - 36 : (dir < 0 ? x0 + bw - 6 : bw / 2 - 6), i * 13 + 2); c.stroke(); }
+    blob(c, 0, 0, 5, '#4a2e1a');
+    c.restore();
+  };
+  board(110, -1, -.06); board(185, 0, .02); board(260, 1, .05);
+  c.fillStyle = '#e48fa0'; c.beginPath(); c.ellipse(cx - 14, 330, 15, 8, -.3, 0, Math.PI * 2); c.ellipse(cx + 14, 330, 15, 8, .3, 0, Math.PI * 2); c.fill(); blob(c, cx, 330, 6, '#c76b80');
+  c.fillStyle = '#6aa54b'; for (let i = 0; i < 14; i++) blob(c, cx + rnd(-30, 30), h - 20 - rnd(0, 26), 7 + rnd(0, 6), i % 2 ? '#6aa54b' : '#86bb5c');
+  return c.canvas;
+}
+
 function makeOrb(){
   const s = 180, c = mk(s, s).getContext('2d'), m = s / 2;
   const glow = c.createRadialGradient(m, m, 10, m, m, m); glow.addColorStop(0, 'rgba(255,236,170,.95)'); glow.addColorStop(.45, 'rgba(255,196,150,.45)'); glow.addColorStop(1, 'rgba(255,180,190,0)');
@@ -316,7 +340,7 @@ function makeCar(){
 
 /* герои: милые бумажные куколки, у каждого свой наряд */
 const FEM_W = /(дочка|дочь|мать|матушка|старуха|бабушка|княжна|княгиня|царица|царевна|барыня|графиня|вдова|девочка|девушка|жена|сестра|невеста|няня|королева|баба|тётка|тетка|красавица|госпожа|мадам|леди|принцесса|фея|ведьма|хозяйка|кухарка|служанка|горничная|помещица)/i;
-const MALE_FIRST = /^(Илья|Добрыня|Никита|Фома|Кузьма|Савва|Лука|Петруша|Ванюша|Ваня|Миша|Саша|Гриша|Федя|Петя|Коля|Вася|Митя|Сеня|Костя|Лёня|Паша|Ерёма|Хома|Емеля|Мазай|Данила|Гаврила|Михаила|Кирила|Фока|Сеня|Алёша|Альоша|Яша|Ефимушка|Пётра|Вожатый|Дед|Старик|Капитан|Отец|Батя|Папа|Дядя|Лёва|Вова|Дима|Тоня$)/;
+const MALE_FIRST = /^(Петрушка|Ванька|Гришка|Яшка|Мишка|Сашка|Федька|Митька|Тимошка|Прошка|Илья|Добрыня|Никита|Фома|Кузьма|Савва|Лука|Петруша|Ванюша|Ваня|Миша|Саша|Гриша|Федя|Петя|Коля|Вася|Митя|Сеня|Костя|Лёня|Паша|Ерёма|Хома|Емеля|Мазай|Данила|Гаврила|Михаила|Кирила|Фока|Сеня|Алёша|Альоша|Яша|Ефимушка|Пётра|Вожатый|Дед|Старик|Капитан|Отец|Батя|Папа|Дядя|Лёва|Вова|Дима|Тоня$)/;
 function isFem(name){
   if (FEM_W.test(name)) return true;
   const first = name.split(/[\s,]+/)[0];
@@ -429,6 +453,7 @@ function buildSprites(){
   SPR.small = [makeMushroom(1), makeMushroom(6), makeFlowers(4), makeFlowers(12), makeFlowers(31), makeFern(3), makeFern(14), makeRock(5), makeStump()];
   SPR.lantern = makeLantern();
   SPR.orb = makeOrb();
+  SPR.sign = makeSignpost();
   SPR.car = makeCar();
   makeBG();
   SPR.ready = true;
@@ -489,7 +514,7 @@ function buildPool(){
   const all = (typeof HEROES !== 'undefined' && HEROES) || [];
   const cnt = {};
   all.forEach(h => { const n = cleanName(h[1]); cnt[n] = (cnt[n] || new Set()).add(h[0]); });
-  const list = all.map(h => ({ w: h[0], name: cleanName(h[1]) }))
+  const list = all.map(h => ({ w: h[0], name: cleanName(h[1]), desc: h[2] || '' }))
     .filter(h => h.name.length >= 3 && h.name.length <= 32 && cnt[h.name].size === 1 && !/\sи\s|^(Гости|Толпа|Французы|Мужики|Народ|Люди|Солдаты|Крестьяне|Дети)/.test(h.name));
   const byW = {};
   list.forEach(h => (byW[h.w] = byW[h.w] || []).push(h));
@@ -508,37 +533,55 @@ function chooseWorks(){
 /* =========================================================
    ИГРОВОЕ СОСТОЯНИЕ
    ========================================================= */
-function newState(firstWork){
+function newState(work){
   const order = chooseWorks();
-  if (firstWork) { const i = order.indexOf(firstWork); if (i >= 0) order.splice(i, 1); order.unshift(firstWork); }
+  if (work) { const i = order.indexOf(work); if (i >= 0) order.splice(i, 1); order.unshift(work); }
   return {
-    pos: 0, speed: 0, target: START_SPEED, lane: 1, x: 0, tilt: 0,
-    hearts: HEARTS, score: 0, xp: 0, right: 0, level: 0, got: 0, works: order, wi: 0,
-    work: order[0], queue: [], nextZ: SEG * 30, dist: 0, idle: false, inv: 0, shake: 0, flash: 0, flashCol: '', banner: null,
-    pops: [], parts: [], leaves: [], mistakes: [], missed: [], skyX: 0, time: 0, paused: false, over: false, lastSeg: 0, puff: 0, brake: 0, done: []
+    pos: 0, dist: 0, speed: 0, target: CRUISE, x: 0, tilt: 0, idle: false,
+    hearts: HEARTS, score: 0, xp: 0, right: 0, works: order, work: order[0],
+    qs: [], qi: 0, res: [], mode: 'drive', forkAt: 0, signSeg: null, bend: null,
+    nextZ: SEG * 20, shake: 0, flash: 0, flashCol: '', banner: null,
+    pops: [], parts: [], mistakes: [], skyX: 0, time: 0, paused: false, over: false, puff: 0, brake: 0, endAt: 0
   };
 }
-function nextTargetHero(){
-  const P = buildPool();
-  if (!S.queue.length) S.queue = mix(P.byW[S.work]);
-  return S.queue.pop();
-}
-function randomOther(){
-  const P = buildPool(), tnames = new Set(P.byW[S.work].map(h => h.name));
-  for (let i = 0; i < 30; i++) { const h = pick(P.list); if (h.w !== S.work && !tnames.has(h.name)) return h; }
-  return pick(P.list.filter(h => h.w !== S.work));
+function short(t){ return '«' + t.replace(/[«»]/g, '') + '»'; }
+function makeQuestions(w){
+  const P = buildPool(), mine = mix(P.byW[w]), names = new Set(mine.map(h => h.name));
+  const others = mix(P.list.filter(h => h.w !== w && !names.has(h.name)));
+  const otherWorks = mix(P.works.filter(x => x !== w));
+  const withDesc = mine.filter(h => h.desc && h.desc.length > 25);
+  let types = mix(['who', 'who', 'who', 'who', 'from', 'from', 'from', 'desc', 'desc', 'desc']);
+  if (withDesc.length < 3 || mine.length < 3) types = types.map(t => t === 'desc' ? 'who' : t);
+  const used = new Set(); let oi = 0, wi = 0;
+  const nextMine = pool => { const h = pool.find(x => !used.has(x.name)) || pick(pool); used.add(h.name); return h; };
+  const qs = types.map(t => {
+    if (t === 'who') {
+      const h = nextMine(mine), wrong = [others[oi++ % others.length], others[oi++ % others.length]];
+      const opts = mix([{ t: h.name, ok: true }].concat(wrong.map(o => ({ t: o.name, ok: false, note: o.name + ' это герой ' + workTitle(o.w) }))));
+      return { kind: 'Развилка', text: 'Кто из этих героев есть в произведении ' + workTitle(w) + '?', opts, right: h.name };
+    }
+    if (t === 'from') {
+      const h = nextMine(mine), ws = [otherWorks[wi++ % otherWorks.length], otherWorks[wi++ % otherWorks.length]];
+      const lab = x => short(byId(x).title) + ' · ' + byId(x).author;
+      const opts = mix([{ t: lab(w), ok: true }].concat(ws.map(x => ({ t: lab(x), ok: false }))));
+      return { kind: 'Развилка', text: 'Из какого произведения этот герой?', hero: h.name, opts, right: workTitle(w), note: h.name + ' это герой ' + workTitle(w) };
+    }
+    const h = nextMine(withDesc), rest = mix(mine.filter(x => x.name !== h.name)).slice(0, 2);
+    const opts = mix([{ t: h.name, ok: true }].concat(rest.map(o => ({ t: o.name, ok: false }))));
+    const txt = typeof maskName === 'function' ? maskName(h.name, h.desc) : h.desc;
+    return { kind: 'Развилка', text: 'Кто это?', desc: txt, opts, right: h.name, note: 'Это ' + h.name };
+  });
+  return qs;
 }
 function placeItem(z, item){ const s = findSeg(z); s.items.push(item); }
-function spawnRow(z){
-  const t = Math.random(), lanes = mix([0, 1, 2]);
-  const hero = (h, lane, good) => placeItem(z, { kind: 'hero', h, lane, good, taken: false, wiggle: Math.random() * 6 });
-  const orbs = (lane, n, gap) => { for (let i = 0; i < n; i++) placeItem(z + i * SEG * gap, { kind: 'xp', lane, taken: false }); };
-  if (t < .38) { hero(nextTargetHero(), lanes[0], true); hero(randomOther(), lanes[1], false); if (Math.random() < .5) orbs(lanes[2], 3, 3); }
-  else if (t < .6) { hero(nextTargetHero(), lanes[0], true); orbs(lanes[1], 4, 3); }
-  else if (t < .78) { hero(randomOther(), lanes[0], false); hero(randomOther(), lanes[1], false); orbs(lanes[2], 3, 3); }
-  else if (t < .9) { hero(randomOther(), lanes[0], false); orbs(lanes[0] === 1 ? 0 : 1, 5, 3); }
-  else { orbs(lanes[0], 6, 3); }
+function spawnOrbs(z){ const n = 3 + (Math.random() * 3 | 0); for (let i = 0; i < n; i++) placeItem(z + i * SEG * 3, { kind: 'xp', lane: 1, taken: false }); }
+function planFork(from){
+  S.forkAt = from;
+  const seg = findSeg((S.forkAt + CAM_H * DEPTH + SEG * 9) % trackLen);
+  const spr = { img: SPR.sign, x: 1.22, h: 1.35, fork: true };
+  seg.sprites.push(spr); S.signSeg = { seg, spr };
 }
+function dropSign(){ if (S && S.signSeg) { const a = S.signSeg.seg.sprites, i = a.indexOf(S.signSeg.spr); if (i >= 0) a.splice(i, 1); S.signSeg = null; } }
 
 /* =========================================================
    ЗВУК
@@ -712,7 +755,7 @@ function render(){
     const zOff = S.pos - (seg.looped ? trackLen : 0);
     project(seg.p1, camX - x, camY, zOff);
     project(seg.p2, camX - x - dx, camY, zOff);
-    seg.x1 = x; x += dx; dx += seg.curve;
+    seg.x1 = x; x += dx; dx += seg.curve + (S.bendNow || 0);
     if (seg.p1.camera.z <= DEPTH || seg.p2.screen.y >= seg.p1.screen.y || seg.p2.screen.y >= maxy) continue;
     drawSegment(seg, seg.fog);
     maxy = seg.p2.screen.y;
@@ -815,53 +858,53 @@ function pop(text, good, long){
 function update(dt){
   S.time += dt;
   if (S.paused) return;
-  // скорость
-  S.speed = lerp(S.speed, S.target, 1 - Math.pow(.4, dt));
-  const prevPos = S.pos;
-  S.pos = (S.pos + S.speed * dt) % trackLen;
+  // скорость: плавно тормозим перед развилкой
+  let want = S.idle ? 1600 : S.mode === 'ask' ? 0 : CRUISE;
+  if (!S.idle && S.mode === 'drive') { const rem = S.forkAt - S.dist; want = Math.min(want, Math.sqrt(Math.max(0, 2 * DECEL * rem))); if (rem <= 4) { S.dist = S.forkAt; ask(); want = 0; } }
+  S.speed = S.mode === 'drive' && !S.idle ? Math.min(lerp(S.speed, want, 1 - Math.pow(.3, dt)), want + 1) : lerp(S.speed, want, 1 - Math.pow(.05, dt));
+  if (S.speed < 2) S.speed = S.mode === 'ask' ? 0 : S.speed;
+  const prevPos = S.pos, step = S.speed * dt;
+  S.pos = (S.pos + step) % trackLen; S.dist += step;
   const seg = findSeg(S.pos + CAM_H * DEPTH);
-  S.skyX += seg.curve * (S.speed / MAX_SPEED) * dt * .5;
-  // смена полосы
-  const tx = LANES[S.lane], before = S.x;
-  S.x = lerp(S.x, tx, 1 - Math.pow(.00002, dt));
-  S.tilt = lerp(S.tilt, clamp((S.x - before) / dt * .35, -1, 1) - seg.curve * .06 * (S.speed / MAX_SPEED), 1 - Math.pow(.01, dt));
-  // спавн впереди (по абсолютной дистанции, чтобы не путаться с кругами трассы)
-  S.dist = (S.dist || 0) + S.speed * dt;
-  while (S.nextZ < S.dist + DRAW * SEG * .85) {
-    if (!S.idle) spawnRow(S.nextZ % trackLen);
-    S.nextZ += SEG * (26 + Math.random() * 10);
+  // поворот на развилке
+  S.bendNow = 0;
+  if (S.bend) {
+    S.bend.t += dt / 2.4;
+    const e = Math.sin(Math.PI * clamp(S.bend.t, 0, 1));
+    S.bendNow = S.bend.dir * 3.2 * e * (S.speed / CRUISE);
+    if (S.bend.t >= 1) S.bend = null;
   }
-  // проверка столкновений: все сегменты, которые проехала машина
+  S.skyX += (seg.curve + S.bendNow * 4) * (S.speed / MAX_SPEED) * dt * .5;
+  S.tilt = lerp(S.tilt, -(seg.curve + S.bendNow * 3) * .08 * (S.speed / CRUISE), 1 - Math.pow(.02, dt));
+  // XP на дороге
+  while (S.nextZ < S.dist + DRAW * SEG * .8) {
+    const z = S.nextZ, near = Math.abs(z - S.forkAt) < SEG * 18;
+    if (!S.idle && !near) spawnOrbs(z % trackLen);
+    S.nextZ += SEG * (12 + Math.random() * 10);
+  }
   const pz = CAM_H * DEPTH, from = Math.floor((prevPos + pz) / SEG), to = Math.floor((S.pos + pz + (S.pos < prevPos ? trackLen : 0)) / SEG);
-  for (let i = from + 1; i <= to && !S.idle; i++) {
-    const s = segs[i % segs.length];
-    for (const it of s.items) {
-      if (it.taken) continue;
-      if (Math.abs(S.x - LANES[it.lane]) < .34) hit(it);
-      else if (it.kind === 'hero' && it.good) S.missed.push(it.h.name);
-    }
-    s.items = [];
-    // чистим сегменты позади, если остались
-    const behind = segs[(i - 3 + segs.length) % segs.length]; if (behind.items.length) behind.items = [];
+  for (let i = from + 1; i <= to; i++) {
+    const sg = segs[i % segs.length];
+    for (const it of sg.items) if (!it.taken && !S.idle) grab(it);
+    sg.items = [];
   }
+  // конец поездки
+  if (S.endAt && S.dist >= S.endAt && !S.over) gameOver();
   // эффекты
-  S.inv = Math.max(0, S.inv - dt); S.shake = Math.max(0, S.shake - dt * 2.5); S.flash = Math.max(0, S.flash - dt * 1.8); S.brake = Math.max(0, S.brake - dt * 1.5);
+  S.shake = Math.max(0, S.shake - dt * 2.5); S.flash = Math.max(0, S.flash - dt * 1.8); S.brake = S.mode === 'ask' || (S.mode === 'drive' && S.speed < want - 50) ? Math.min(1, S.brake + dt * 3) : Math.max(0, S.brake - dt * 2);
   S.pops.forEach(p => p.life -= dt); S.pops = S.pops.filter(p => p.life > 0);
-  // выхлоп
   S.puff -= dt;
-  if (S.puff <= 0 && S.carBox) { S.puff = .06; S.parts.push({ kind: 'puff', x: S.carBox.cx + S.carBox.w * .25, y: S.carBox.cy + S.carBox.h * .36, vx: 20 + Math.random() * 30, vy: -4 + Math.random() * 10, r: 3 + Math.random() * 3, gr: 22, life: .7, a: .45 }); }
-  // пыльца и листья
+  if (S.puff <= 0 && S.carBox) { S.puff = S.speed > 50 ? .07 : .25; S.parts.push({ kind: 'puff', x: S.carBox.cx + S.carBox.w * .25, y: S.carBox.cy + S.carBox.h * .36, vx: 20 + Math.random() * 30, vy: -4 + Math.random() * 10, r: 3 + Math.random() * 3, gr: 22, life: .7, a: .45 }); }
   if (Math.random() < dt * 6) S.parts.push({ kind: 'pollen', x: Math.random() * W, y: Math.random() * H * .8, vx: (Math.random() - .5) * 20, vy: -5 - Math.random() * 8, r: 1.2 + Math.random() * 1.8, life: 2 + Math.random() * 2, gr: 0 });
   if (Math.random() < dt * 1.6) S.parts.push({ kind: 'leaf', x: Math.random() * W, y: -10, vx: -30 + Math.random() * 60, vy: 40 + Math.random() * 40, r: 5 + Math.random() * 4, rot: Math.random() * 6, vr: (Math.random() - .5) * 4, col: pick(['#d9a441', '#c8742e', '#9cbb4c', '#e2b25c', '#b5552f']), life: 5, gr: 0 });
   for (const p of S.parts) {
     p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
-    if (p.kind === 'puff') { p.r += p.gr * dt; }
+    if (p.kind === 'puff') p.r += p.gr * dt;
     if (p.kind === 'leaf') { p.rot += p.vr * dt; p.vx += Math.sin(S.time * 2 + p.r) * 30 * dt; if (p.y > H) p.life = 0; }
     if (p.kind === 'spark' || p.kind === 'heart') p.vy += 260 * dt;
   }
   S.parts = S.parts.filter(p => p.life > 0);
   if (S.parts.length > 260) S.parts.splice(0, S.parts.length - 260);
-  // баннер
   if (S.banner) { S.banner.t -= dt; if (S.banner.t <= 0) { S.banner = null; hud(); } }
 }
 
@@ -869,37 +912,62 @@ function burst(kind, n, cols){
   if (!S.carBox) return;
   for (let i = 0; i < n; i++) S.parts.push({ kind, x: S.carBox.cx + (Math.random() - .5) * S.carBox.w * .6, y: S.carBox.cy - S.carBox.h * .4, vx: (Math.random() - .5) * 260, vy: -180 - Math.random() * 200, r: kind === 'heart' ? 6 + Math.random() * 5 : 2 + Math.random() * 3, col: pick(cols), life: .9 + Math.random() * .5, gr: 0 });
 }
-
-function hit(it){
-  it.taken = true;
-  if (it.kind === 'xp') { S.xp++; S.score += 1; SND.xp(); burst('spark', 6, ['#ffe08a', '#ffd1dc', '#fff6d6']); hud(); return; }
-  if (it.good) {
-    S.got++; S.right++; S.score += 10; S.done.push(it.h.name);
-    SND.good(); burst('heart', 14, ['#f08aa3', '#ffd1dc', '#e2577c', '#fff']);
-    pop('✓ ' + it.h.name, true);
-    if (S.got >= NEED) levelUp();
-    hud(); return;
-  }
-  if (S.inv > 0) return;
-  S.hearts--; S.inv = 1.4; S.shake = 1; S.flash = .35; S.flashCol = 'rgba(200,40,60,A)'; S.brake = 1; S.speed *= .55;
-  S.mistakes.push({ name: it.h.name, w: it.h.w });
-  SND.bad(); if (navigator.vibrate) try { navigator.vibrate(120); } catch (e) {}
-  pop('✕ ' + it.h.name + '\nэто герой ' + workTitle(it.h.w), false, true);
-  hud();
-  if (S.hearts <= 0) setTimeout(gameOver, 700);
+function grab(it){
+  it.taken = true; S.xp++; S.score += 1; SND.xp(); burst('spark', 6, ['#ffe08a', '#ffd1dc', '#fff6d6']); hud();
 }
 
-function levelUp(){
-  S.level++; S.got = 0; S.score += 25; S.queue = [];
-  S.wi = (S.wi + 1) % S.works.length; S.work = S.works[S.wi];
-  S.target = Math.min(MAX_SPEED, START_SPEED + S.level * SPEED_STEP);
-  // убираем впереди всех старых героев: задание поменялось
-  segs.forEach(s => { s.items = s.items.filter(i => i.kind === 'xp'); });
-  S.nextZ = S.dist + SEG * 50;
-  S.banner = { t: 2, head: 'Отлично! Новое задание' };
-  S.flash = .5; S.flashCol = 'rgba(255,240,210,A)';
-  SND.level(); burst('heart', 26, ['#f08aa3', '#ffd1dc', '#e2577c', '#fff', '#f5c15a']);
+/* ---------- развилка ---------- */
+function ask(){
+  if (S.mode === 'ask') return;
+  S.mode = 'ask'; S.speed = 0;
+  const q = S.qs[S.qi], box = document.getElementById('rask'); if (!box || !q) return;
+  const dirs = [['left', '⬅', 'налево'], ['up', '⬆', 'прямо'], ['right', '➡', 'направо']];
+  const portrait = q.hero ? `<img class="rq-hero" src="${makeHero(q.hero).toDataURL()}" alt="">` : '';
+  box.innerHTML = `
+    <div class="rq">
+      <p class="rq-k">Развилка ${S.qi + 1} из ${S.qs.length}</p>
+      ${portrait}
+      ${q.hero ? `<h2 class="rq-name">${esc(q.hero)}</h2>` : ''}
+      <p class="rq-t">${esc(q.text)}</p>
+      ${q.desc ? `<p class="rq-d">${esc(q.desc)}</p>` : ''}
+    </div>
+    <div class="rsigns"><i class="rpole"></i>
+      ${q.opts.map((o, i) => `<button class="rsign ${dirs[i][0]}" data-i="${i}"><span class="ra">${dirs[i][1]}</span><b>${esc(o.t)}</b></button>`).join('')}
+    </div>`;
+  box.classList.add('on');
+  box.querySelectorAll('.rsign').forEach(b => b.onclick = () => answer(+b.dataset.i));
+  blip(660, 520, .18, 'triangle', .08);
+}
+function fb(ok, main, sub){
+  const q = document.querySelector('#rask .rq'); if (!q) return;
+  const d = document.createElement('div'); d.className = 'rfb ' + (ok ? 'ok' : 'bad');
+  d.innerHTML = '<b>' + (ok ? '✓ ' : '✕ ') + esc(main) + '</b>' + (sub ? '<span>' + esc(sub) + '</span>' : '');
+  q.appendChild(d); q.scrollTop = q.scrollHeight;
+}
+function answer(i){
+  if (!S || S.mode !== 'ask') return;
+  const q = S.qs[S.qi], o = q.opts[i], box = document.getElementById('rask');
+  S.mode = 'answered';
+  box.querySelectorAll('.rsign').forEach((b, k) => { b.disabled = true; if (q.opts[k].ok) b.classList.add('ok'); else if (k === i) b.classList.add('bad'); });
+  if (o.ok) {
+    S.right++; S.score += 10; S.res.push(true);
+    SND.good(); burst('heart', 16, ['#f08aa3', '#ffd1dc', '#e2577c', '#fff']);
+    fb(true, 'Верно! 💗');
+  } else {
+    S.hearts--; S.res.push(false); S.shake = .8; S.flash = .3; S.flashCol = 'rgba(200,40,60,A)';
+    S.mistakes.push({ q: q.hero ? q.hero + ': из какого произведения?' : q.desc ? 'Кто это? ' + q.desc : q.text, right: q.right, note: o.note || q.note || '' });
+    SND.bad(); if (navigator.vibrate) try { navigator.vibrate(100); } catch (e) {}
+    fb(false, 'Правильно: ' + q.right, o.note || '');
+  }
   hud();
+  setTimeout(() => {
+    if (!S || !running) return;
+    box.classList.remove('on');
+    S.bend = { dir: i - 1, t: 0 }; S.mode = 'drive'; S.qi++;
+    S.signPassAt = S.dist + CAM_H * DEPTH + SEG * 14;
+    if (S.hearts <= 0 || S.qi >= S.qs.length) { S.endAt = S.dist + 4500; S.forkAt = 1e12; }
+    else { const keep = S.signSeg; S.signSeg = null; setTimeout(() => { if (keep) { const a = keep.seg.sprites, k = a.indexOf(keep.spr); if (k >= 0) a.splice(k, 1); } }, 4000); planFork(S.dist + GAP); }
+  }, o.ok ? 900 : 2800);
 }
 
 /* =========================================================
@@ -911,9 +979,9 @@ function hud(){
   el.querySelector('.rh-score b').textContent = S.score;
   el.querySelector('.rh-xp b').textContent = S.xp;
   el.querySelector('.rh-task b').textContent = workTitle(S.work);
-  el.querySelector('.rh-prog').innerHTML = Array.from({ length: NEED }, (_, i) => `<i class="${i < S.got ? 'on' : ''}"></i>`).join('');
+  el.querySelector('.rh-prog').innerHTML = Array.from({ length: FORKS }, (_, i) => `<i class="${S.res[i] === true ? 'on' : S.res[i] === false ? 'bad' : ''}"></i>`).join('');
   const bn = document.getElementById('rbanner');
-  if (bn) { if (S.banner) { bn.innerHTML = `<p>${esc(S.banner.head)}</p><h2>Собери героев<br>${esc(workTitle(S.work))}</h2>`; bn.classList.add('on'); } else bn.classList.remove('on'); }
+  if (bn) { if (S.banner) { bn.innerHTML = `<p>${esc(S.banner.head)}</p><h2>Поездка по<br>${esc(workTitle(S.work))}</h2>`; bn.classList.add('on'); } else bn.classList.remove('on'); }
 }
 
 function loop(t){
@@ -923,29 +991,13 @@ function loop(t){
   raf = requestAnimationFrame(loop);
 }
 
-function steer(d){
-  if (!S || S.paused || S.over || S.idle) return;
-  const nl = clamp(S.lane + d, 0, 2);
-  if (nl !== S.lane) { S.lane = nl; blip(300, 420, .06, 'sine', .04); }
-}
 function onKey(e){
-  if (!running) return;
-  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'ф') { steer(-1); e.preventDefault(); }
-  else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'в') { steer(1); e.preventDefault(); }
-  else if (e.key === ' ' || e.key === 'Escape' || e.key === 'p') { togglePause(); e.preventDefault(); }
-}
-let touch0 = null;
-function onDown(e){
-  if (!S || S.over) return;
-  if (e.target.closest && e.target.closest('button, a, select')) return;
-  touch0 = { x: e.clientX, y: e.clientY, t: performance.now() };
-}
-function onUp(e){
-  if (!touch0) return;
-  const dx = e.clientX - touch0.x;
-  if (Math.abs(dx) > 30) steer(dx > 0 ? 1 : -1);
-  else steer(touch0.x < W / 2 ? -1 : 1);
-  touch0 = null;
+  if (!running || !S) return;
+  if (S.mode === 'ask') {
+    const m = { ArrowLeft: 0, ArrowUp: 1, ArrowRight: 2, '1': 0, '2': 1, '3': 2 }[e.key];
+    if (m != null && S.qs[S.qi] && S.qs[S.qi].opts[m]) { answer(m); e.preventDefault(); return; }
+  }
+  if (e.key === ' ' || e.key === 'Escape' || e.key === 'p') { togglePause(); e.preventDefault(); }
 }
 function togglePause(){
   if (!S || S.over || S.idle || !running) return;
@@ -953,7 +1005,7 @@ function togglePause(){
   const p = document.getElementById('rpause'); if (p) p.classList.toggle('on', S.paused);
   const b = document.getElementById('rpbtn'); if (b) b.textContent = S.paused ? '▶' : '❚❚';
 }
-function onVis(){ if (document.hidden && S && !S.paused && !S.over && running) togglePause(); }
+function onVis(){ if (document.hidden && S && !S.paused && !S.over && running && S.mode !== 'ask') togglePause(); }
 
 /* =========================================================
    ЭКРАНЫ
@@ -972,9 +1024,10 @@ function shell(){
         <button class="rbtn" id="rsnd" aria-label="Звук">${MUTE ? '🔇' : '🔊'}</button>
         <button class="rbtn" id="rpbtn" aria-label="Пауза">❚❚</button>
       </div>
-      <div class="rh-task"><span>Собери героев</span><b></b><div class="rh-prog"></div></div>
+      <div class="rh-task"><span>Поездка по</span><b></b><div class="rh-prog"></div></div>
     </div>
     <div class="rbanner" id="rbanner"></div>
+    <div class="rask" id="rask"></div>
     <div class="rpause" id="rpause"><div class="rcard"><h2>Пауза</h2><button class="dbtn" id="rcont">Продолжить</button><a class="dbtn ghost" href="#/games">Выйти</a></div></div>
     <div class="rstart" id="rstart"></div>
   </div>`;
@@ -983,8 +1036,6 @@ function shell(){
   document.getElementById('rpbtn').onclick = togglePause;
   document.getElementById('rcont').onclick = togglePause;
   document.getElementById('rsnd').onclick = e => { MUTE = !MUTE; try { localStorage.setItem('dilyaRaceMute', MUTE ? '1' : '0'); } catch (x) {} e.currentTarget.textContent = MUTE ? '🔇' : '🔊'; audioOn(); };
-  const r = document.getElementById('race');
-  r.addEventListener('pointerdown', onDown); r.addEventListener('pointerup', onUp);
 }
 
 function startScreen(){
@@ -998,10 +1049,10 @@ function startScreen(){
     <div class="rcard">
       <p class="label">Мини-игра</p>
       <h1>Лесная дорога</h1>
-      <p class="rlead">Едешь по лесу, собираешь <b>⚡ XP</b> и героев нужного произведения. Чужих героев объезжай: за каждого минус ❤.</p>
-      <label class="rsel"><span>Первое задание</span>
+      <p class="rlead">Спокойно едешь по лесу и собираешь <b>⚡ XP</b>. На каждой развилке указатель с вопросом: выбери правильную табличку, и машина свернёт туда. Торопиться некуда 💗</p>
+      <label class="rsel"><span>Произведение</span>
         <select id="rwork"><option value="">🎲 Случайное произведение</option>${opts}</select></label>
-      <div class="rhow"><span>⬅️ ➡️ стрелки</span><span>👆 тап слева или справа</span><span>👉 свайп</span></div>
+      <div class="rhow"><span>🪧 10 развилок</span><span>❤ 3 сердечка</span><span>⏳ без таймера</span></div>
       <button class="dbtn" id="rgo">Поехали! 🚗</button>
       <p class="rrec">${(store.games || {}).race ? 'Твой рекорд: ⭐ ' + store.games.race : 'Здесь появится твой рекорд'}</p>
     </div>`;
@@ -1015,19 +1066,23 @@ function startScreen(){
 
 function go(work){
   const keep = S ? { pos: S.pos, dist: S.dist, speed: S.speed, skyX: S.skyX, time: S.time } : null;
-  segs.forEach(sg => sg.items = []);
+  segs.forEach(sg => { sg.items = []; sg.sprites = sg.sprites.filter(x => !x.fork); });
+  if (S) { const a = askBox(); a && a.classList.remove('on'); }
   S = newState(work);
   if (keep) Object.assign(S, keep);
-  S.nextZ = S.dist + SEG * 50;
-  S.banner = { t: 2, head: 'Задание' };
+  S.nextZ = S.dist + SEG * 10;
+  S.qs = makeQuestions(S.work);
+  planFork(S.dist + GAP * .8);
+  S.banner = { t: 2.2, head: 'Начинаем' };
   const p = document.getElementById('rpause'); if (p) p.classList.remove('on');
   const rc = document.getElementById('race'); if (rc) rc.classList.remove('pre');
   hud();
 }
 
+function askBox(){ return document.getElementById('rask'); }
 function gameOver(){
   if (!S || S.over) return;
-  S.over = true; S.idle = true; S.target = 1600; SND.over();
+  S.over = true; S.idle = true; dropSign();
   const best = (store.games || {}).race || 0, rec = S.score > best;
   store.games = store.games || {}; if (rec) store.games.race = S.score;
   store.gameRight = (store.gameRight || 0) + S.right;
@@ -1035,20 +1090,25 @@ function gameOver(){
   store.gxp = store.gxp || {}; const used = store.gxp[today()] || 0, gain = Math.max(0, Math.min(earned, GAME_XP_DAY - used));
   Object.keys(store.gxp).forEach(d => { if (d !== today()) delete store.gxp[d]; });
   store.gxp[today()] = used + gain; addBonus(gain); save();
-  const mis = S.mistakes.slice(-6).map(m => `<li><b>${esc(m.name)}</b> это герой ${esc(workTitle(m.w))}</li>`).join('');
+  const all = S.right === S.qs.length, lost = S.hearts <= 0;
+  if (all) SND.level(); else SND.over();
+  const mis = S.mistakes.map(m => `<li><span>${esc(m.q.length > 120 ? m.q.slice(0, 120).replace(/\s\S*$/, '') + '…' : m.q)}</span><b>${esc(m.right)}</b>${m.note && m.note.indexOf(m.right) < 0 ? `<em>${esc(m.note)}</em>` : ''}</li>`).join('');
   const st = document.getElementById('rstart'); if (!st) return;
   st.classList.remove('hide');
   st.innerHTML = `
-    <div class="rcard rend">${rec && S.score ? confetti() : ''}
-      ${MASCOT(S.score >= 50 ? 'happy' : 'wave')}
-      <h1>${rec && S.score ? 'Новый рекорд!' : 'Приехали!'}</h1>
-      <div class="endstats"><div><span>Очки</span><b>⭐ ${S.score}</b></div><div><span>Герои</span><b>💗 ${S.right}</b></div><div><span>Опыт</span><b>⚡ ${gain}</b></div></div>
-      <p class="rrec">Произведений пройдено: <b>${S.level}</b> · Рекорд: <b>⭐ ${Math.max(best, S.score)}</b></p>
+    <div class="rcard rend">${all || (rec && S.score) ? confetti() : ''}
+      ${MASCOT(all ? 'happy' : lost ? 'sad' : 'wave')}
+      <h1>${all ? 'Без единой ошибки!' : lost ? 'Сердечки закончились' : 'Приехали!'}</h1>
+      <p class="rrec">${esc(workTitle(S.work))}</p>
+      <div class="endstats"><div><span>Верно</span><b>✅ ${S.right}/${S.qs.length}</b></div><div><span>Очки</span><b>⭐ ${S.score}</b></div><div><span>Опыт</span><b>⚡ ${gain}</b></div></div>
+      <p class="rrec">Рекорд: <b>⭐ ${Math.max(best, S.score)}</b>${rec && S.score ? ' · новый!' : ''}</p>
       ${gain < earned ? '<p class="endnote">Дневной лимит XP за игры набран, но рекорды считаются всегда 💗</p>' : ''}
       ${mis ? `<div class="rmis"><p class="label">Запомни</p><ul>${mis}</ul></div>` : ''}
-      <div class="endbtns"><button class="dbtn" id="ragain">Ещё раз</button><a class="dbtn ghost" href="#/games">Другие игры</a></div>
+      <div class="endbtns"><button class="dbtn" id="rnext">Новая поездка 🚗</button><button class="dbtn ghost" id="ragain">Это же произведение ещё раз</button><a class="dbtn ghost" href="#/games">Другие игры</a></div>
     </div>`;
-  document.getElementById('ragain').onclick = () => { st.classList.add('hide'); audioOn(); go(null); };
+  const w = S.work;
+  document.getElementById('rnext').onclick = () => { st.classList.add('hide'); audioOn(); go(pick(chooseWorks().filter(x => x !== w)) || null); };
+  document.getElementById('ragain').onclick = () => { st.classList.add('hide'); audioOn(); go(w); };
 }
 
 function start(){

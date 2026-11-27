@@ -417,3 +417,39 @@ body.race-on .chatfab,body.race-on .fmini{display:none!important}
 .rmis ul{margin:6px 0 0;padding-left:18px;font-size:14px;line-height:1.5;color:var(--text)}
 .rend .endbtns{margin-top:4px}
 .race.pre .rh-task,.race.pre .rh-hearts,.race.pre .rh-score,.race.pre .rh-xp,.race.pre #rpbtn{visibility:hidden}
+/* развилки */
+.rh-prog i.bad{background:#b9a3a6}
+.race:has(.rask.on) .rh-task{display:none}
+.rask{position:absolute;left:0;right:0;top:calc(62px + env(safe-area-inset-top));bottom:0;display:none;flex-direction:column;align-items:center;gap:14px;padding:0 14px 27vh;pointer-events:none}
+.rask.on{display:flex;animation:rIn .35s cubic-bezier(.3,1.3,.5,1)}
+@keyframes rIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+.rq{pointer-events:auto;background:rgba(255,252,248,.97);border-radius:22px;padding:12px 18px 14px;text-align:center;box-shadow:0 5px 0 rgba(107,38,51,.22);width:min(100%,460px);max-height:42vh;overflow-y:auto}
+.rq-k{margin:0;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label)}
+.rq-hero{display:block;height:84px;margin:6px auto 0}
+.rq-name{margin:2px 0 0;font-family:var(--serif);font-size:26px;line-height:1.05;color:var(--burg)}
+.rq-t{margin:6px 0 0;font-weight:800;font-size:17px;line-height:1.3;color:var(--ink)}
+.rq-d{margin:8px 0 0;font-size:15px;line-height:1.45;color:var(--text);background:var(--pink);border-radius:14px;padding:10px 12px;text-align:left}
+.rsigns{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;width:min(100%,400px);margin-top:auto;pointer-events:auto}
+.rpole{position:absolute;left:50%;top:-6px;bottom:-24px;width:16px;margin-left:-8px;border-radius:6px;background:linear-gradient(90deg,#5a3a22,#9a6a42 50%,#4a2e1a)}
+.rsign{position:relative;display:flex;align-items:center;gap:10px;width:88%;min-height:58px;border:0;padding:10px 22px;cursor:pointer;color:#fff8ec;font:800 16px/1.2 var(--sans);text-align:left;background:linear-gradient(#c9935c,#8e5c33);filter:drop-shadow(0 4px 0 #5e3a1f);transition:transform .15s,filter .2s}
+.rsign b{flex:1;font-weight:800;text-shadow:0 1px 0 rgba(60,30,10,.4)}
+.rsign .ra{font-size:20px;line-height:1}
+.rsign.left{align-self:flex-start;clip-path:polygon(0 50%,22px 0,100% 0,100% 100%,22px 100%);padding-left:30px}
+.rsign.up{border-radius:10px}
+.rsign.right{align-self:flex-end;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 50%,calc(100% - 22px) 100%,0 100%);padding-right:30px;flex-direction:row-reverse;text-align:right}
+.rsign:not(:disabled):active{transform:scale(.97)}
+@media(hover:hover){.rsign:not(:disabled):hover{transform:translateY(-2px)}}
+.rsign.ok{background:linear-gradient(#8cc56d,#4f8a3e)}
+.rsign.bad{background:linear-gradient(#e0828f,#a8435a)}
+.rsign:disabled:not(.ok):not(.bad){opacity:.55}
+.rmis li{margin-bottom:8px}
+.rmis li span{display:block;color:var(--muted);font-size:13px}
+.rmis li b{color:var(--burg)}
+.rmis li em{display:block;font-style:normal;font-size:13px;color:var(--text)}
+.rh-score,.rh-xp{white-space:nowrap;padding:8px 10px;font-size:14px}
+.rh-top{gap:6px}
+.rfb{margin-top:10px;border-radius:14px;padding:8px 12px;animation:rIn .3s}
+.rfb b{display:block;font-size:16px}
+.rfb span{display:block;font-size:14px;margin-top:2px}
+.rfb.ok{background:#e6f4dc;color:#2f5a2a}
+.rfb.bad{background:#fde4e7;color:#7e1f2f}
