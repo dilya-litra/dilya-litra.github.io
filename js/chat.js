@@ -98,7 +98,7 @@ function openChat(){
   const nm = typeof firstName === 'function' ? firstName() : '';
   w.innerHTML = `<div class="chhead"><img src="mascot/wave.svg" alt=""><div><b>Диля</b><span>ИИ-помощница курса 💗</span></div><button class="chmenu" data-clear title="Очистить чат">🗑</button><button class="chx" data-close aria-label="Закрыть">×</button></div>
     <div class="chlog" id="chlog">
-      <div class="chm a"><div class="cb">Привет${nm ? ', ' + esc(nm) : ''}! Я Диля 🌸 Спрашивай про любое произведение из курса, проверю тебя в формате ЕНТ или просто поболтаем. Если на душе тяжело, тоже пиши, я выслушаю.</div><small>Я ИИ и иногда ошибаюсь, сверяйся с конспектами. Не пиши мне личные данные: адрес, телефон, пароли.</small></div>
+      <div class="chm a"><div class="cb">Привет${nm ? ', ' + esc(nm) : ''}! Я Диля 🌸 Спрашивай про любое произведение из курса, проверю тебя в формате ЕНТ или просто поболтаем. Если на душе тяжело, тоже пиши, я выслушаю.</div></div>
       ${CH.msgs.map(m => `<div class="chm ${m.r}"><div class="cb">${m.r === 'a' ? fmtMsg(m.t) : esc(m.t).replace(/\n/g, '<br>')}</div></div>`).join('')}
     </div>
     ${CH.msgs.length ? '' : `<div class="chchips">${CHIPS.map(c => `<button>${esc(c)}</button>`).join('')}</div>`}
