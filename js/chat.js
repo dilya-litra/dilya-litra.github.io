@@ -117,4 +117,4 @@ function chSend(text){
     })
     .catch(() => done('Не получается связаться 😔 Проверь интернет и попробуй ещё раз', false));
 }
-if (CHAT_URL || /[?chatBtn();]chat/.test(location.search)) chatBtn();
+if (CHAT_URL || location.search.indexOf('chat') >= 0) chatBtn();
