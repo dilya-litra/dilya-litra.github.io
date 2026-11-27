@@ -9,7 +9,7 @@ const CONFIG = {
   api: '',
   bot: 'dilya_litra_bot',
   // адрес сервера чат-бота Дили (Cloudflare Worker). Пусто: Диля пишет «скоро заработаю»
-  chat: '',
+  chat: 'https://dilya-chat.diko80249.workers.dev',
   streams: {
     '2': { monday: '2026-11-30', week: 9, before: 7 },
     '3': { monday: '2026-11-30', week: 5, before: 4 }
