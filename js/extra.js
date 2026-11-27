@@ -591,7 +591,7 @@ function setPathBg(on){
   const k = store.pathbg; if (on && k && bgOwned(k)) document.body.classList.add('bg-' + k);
 }
 function setNav(h){
-  const cur = ['review', 'mock', 'games', 'me', 'map', 'rating'].includes(h) ? h : 'home';
+  const cur = ['review', 'mock', 'games', 'me', 'map', 'rating', 'plan'].includes(h) ? h : 'home';
   document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === cur));
   const n = dueMistakes().length;
   document.querySelectorAll('.navdot').forEach(d => { d.textContent = n; d.hidden = !n; });
@@ -611,6 +611,7 @@ function route(){
   else if (h[0] === 'games') { if (h[1]) { startGame(h[1]); window.scrollTo(0, 0); return; } renderGames(); }
   else if (h[0] === 'me') renderMe();
   else if (h[0] === 'rating') renderRating();
+  else if (h[0] === 'plan') renderPlan(h[1]);
   else { setPathBg(true); renderHome(); return; }
   window.scrollTo(0, 0);
 }

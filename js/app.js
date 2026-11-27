@@ -244,7 +244,7 @@ function stats(){
     mist: mistakes().length, fixed: store.fixed || 0, mock: (store.mocks || []).slice(-1).map(m => m.score)[0] || '', frame: myFrame(), pose: myPose()
   };
 }
-const SYNC = ['lessons', 'days', 'best', 'bonus', 'freezes', 'frozen', 'fzAt', 'mist', 'fixed', 'badges', 'owned', 'outfit', 'mocks', 'games', 'chests', 'spare', 'xpLog', 'gxp', 'perf', 'kindN', 'gameRight', 'ownF', 'ownP', 'ownB', 'frame', 'pose', 'pathbg', 'boost', 'top3'];
+const SYNC = ['lessons', 'days', 'best', 'bonus', 'freezes', 'frozen', 'fzAt', 'mist', 'fixed', 'badges', 'owned', 'outfit', 'mocks', 'games', 'chests', 'spare', 'xpLog', 'gxp', 'perf', 'kindN', 'gameRight', 'ownF', 'ownP', 'ownB', 'frame', 'pose', 'pathbg', 'boost', 'top3', 'plan', 'focus', 'fxp'];
 let pushTimer = null;
 function push(){
   if (!CONFIG.api || !store.code) return;
@@ -262,7 +262,7 @@ function mergeRemote(d){
   const max = k => Math.max(store[k] || 0, d[k] || 0);
   const mocks = (d.mocks || []).concat(store.mocks || []).filter((m, i, a) => a.findIndex(x => x.d === m.d && x.score === m.score) === i).slice(-30);
   return { lessons, days: obj('days'), frozen: obj('frozen'), mist: Object.assign({}, d.mist || {}, store.mist || {}), badges: obj('badges'), owned: obj('owned'), chests: obj('chests'), games: obj('games'), xpLog: obj('xpLog'), gxp: obj('gxp'),
-    perf: obj('perf'), ownF: obj('ownF'), ownP: obj('ownP'), ownB: obj('ownB'), frame: store.frame || d.frame, pose: store.pose || d.pose, pathbg: store.pathbg != null ? store.pathbg : d.pathbg, boost: max('boost'), top3: store.top3 || d.top3, kindN: max('kindN'), gameRight: max('gameRight'), best: max('best'), bonus: max('bonus'), freezes: max('freezes'), fixed: max('fixed'), spare: max('spare'), outfit: store.outfit || d.outfit, mocks };
+    perf: obj('perf'), ownF: obj('ownF'), ownP: obj('ownP'), ownB: obj('ownB'), frame: store.frame || d.frame, pose: store.pose || d.pose, pathbg: store.pathbg != null ? store.pathbg : d.pathbg, boost: max('boost'), top3: store.top3 || d.top3, plan: obj('plan'), focus: obj('focus'), fxp: obj('fxp'), kindN: max('kindN'), gameRight: max('gameRight'), best: max('best'), bonus: max('bonus'), freezes: max('freezes'), fixed: max('fixed'), spare: max('spare'), outfit: store.outfit || d.outfit, mocks };
 }
 function renderLogin(err){
   app.innerHTML = `
