@@ -130,3 +130,33 @@ body.duo-test .fmini{display:none}
 }
 @media (max-height:700px){.fpill{margin-top:12px}.fcirc{width:min(270px,70vw)}.fctl{margin-top:18px}}
 
+
+/* чат с Дилей */
+.chatfab{position:fixed;z-index:65;right:14px;bottom:calc(var(--navh) + env(safe-area-inset-bottom) + 14px);display:flex;align-items:center;gap:6px;padding:6px 16px 6px 6px;border:2px solid var(--line);border-radius:999px;background:var(--cream);box-shadow:0 10px 26px rgba(91,46,40,.22);font-family:inherit;font-weight:900;font-size:15px;color:var(--burg)}
+.chatfab img{width:46px;height:46px;border-radius:50%;background:var(--pink);object-fit:contain}
+body.duo-test .chatfab,body.focus-on .chatfab,body.chat-on .chatfab{display:none}
+body:has(#fmini) .chatfab{bottom:calc(var(--navh) + env(safe-area-inset-bottom) + 74px)}
+.chatwin{position:fixed;z-index:240;right:20px;bottom:20px;width:min(420px,calc(100% - 40px));height:min(680px,calc(100vh - 40px));display:flex;flex-direction:column;background:var(--paper);border:2px solid var(--line);border-radius:26px;box-shadow:0 24px 60px rgba(60,20,30,.3);overflow:hidden;animation:fadein .25s}
+.chhead{display:flex;align-items:center;gap:10px;padding:12px 12px 12px 14px;background:linear-gradient(90deg,#6B2633,#B5566C);color:#fff}
+.chhead img{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.85)}
+.chhead div{flex:1;display:flex;flex-direction:column}
+.chhead b{font-size:18px}.chhead span{font-size:13px;opacity:.85}
+.chx,.chmenu{border:0;background:rgba(255,255,255,.18);color:#fff;width:40px;height:40px;border-radius:50%;font-size:22px;line-height:1}
+.chmenu{font-size:16px}
+.chlog{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+.chm{max-width:86%;display:flex;flex-direction:column}
+.chm .cb{margin:0;padding:11px 15px;border-radius:20px;font-size:15.5px;line-height:1.5;word-wrap:break-word}
+.chm ul{margin:4px 0;padding-left:20px}.chm li{margin:2px 0}
+.chm.a{align-self:flex-start}.chm.a .cb{background:var(--cream);border:1.5px solid var(--line);border-bottom-left-radius:6px;color:var(--text)}
+.chm.u{align-self:flex-end}.chm.u .cb{background:var(--burg);color:var(--cream);border-bottom-right-radius:6px}
+.chm small{margin:6px 4px 0;font-size:12px;color:var(--muted);line-height:1.4}
+.chm.typing .cb{display:flex;gap:5px;padding:15px 18px}
+.chm.typing i{width:8px;height:8px;border-radius:50%;background:var(--rose2);animation:chdot 1s infinite}
+.chm.typing i:nth-child(2){animation-delay:.15s}.chm.typing i:nth-child(3){animation-delay:.3s}
+@keyframes chdot{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+.chchips{display:flex;gap:8px;overflow-x:auto;padding:0 14px 10px;scrollbar-width:none}
+.chchips button{flex-shrink:0;border:2px solid var(--line);background:var(--cream);border-radius:999px;padding:9px 13px;font-size:14px;font-weight:700;color:var(--burg)}
+.chin{display:flex;gap:8px;align-items:flex-end;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1.5px solid var(--line);background:var(--cream)}
+.chin textarea{flex:1;resize:none;font:inherit;font-size:16px;line-height:1.4;padding:11px 14px;border-radius:20px;border:2px solid var(--line);background:var(--paper);color:var(--text);max-height:120px}
+.chin button{flex-shrink:0;width:46px;height:46px;border-radius:50%;border:0;background:var(--burg);color:var(--cream);font-size:18px}
+@media (max-width:600px){.chatwin{inset:0;width:100%;height:100%;border-radius:0;border:0}body.chat-on{overflow:hidden}.chhead{padding-top:calc(12px + env(safe-area-inset-top))}}
